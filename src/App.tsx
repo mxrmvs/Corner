@@ -16,6 +16,7 @@ import { TrainingScreen } from './TrainingScreen';
 import { RoundResults } from './RoundResults';
 import { NextMatch } from './NextMatch';
 import { MatchHistory } from './MatchHistory';
+import { LineupScreen } from './LineupScreen';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
@@ -28,17 +29,18 @@ import { saveGame, loadGame, deleteGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
-type Screen = 'squad' | 'match' | 'table' | 'club' | 'market' | 'training' | 'history';
+type Screen = 'squad' | 'match' | 'lineup' | 'table' | 'club' | 'market' | 'training' | 'history';
 type AppState = 'loading' | 'select' | 'playing';
 
 const NAV: { label: string; value: Screen }[] = [
-  { label: '👥 Elenco',   value: 'squad'    },
-  { label: '⚽ Partida',  value: 'match'    },
-  { label: '📊 Tabela',   value: 'table'    },
-  { label: '📋 Histórico',value: 'history'  },
-  { label: '🏟️ Clube',    value: 'club'     },
-  { label: '🛒 Mercado',  value: 'market'   },
-  { label: '🏋️ Treino',   value: 'training' },
+  { label: '👥 Elenco',    value: 'squad'    },
+  { label: '📋 Escalação', value: 'lineup'   },
+  { label: '⚽ Partida',   value: 'match'    },
+  { label: '📊 Tabela',    value: 'table'    },
+  { label: '📜 Histórico', value: 'history'  },
+  { label: '🏟️ Clube',     value: 'club'     },
+  { label: '🛒 Mercado',   value: 'market'   },
+  { label: '🏋️ Treino',    value: 'training' },
 ];
 
 function getOpponentId(calendar: Calendar | null, userClubId: string): string {
@@ -67,6 +69,7 @@ function App() {
   const [report, setReport]           = useState<{ news: string[] } | null>(null);
   const [dilemma, setDilemma]         = useState<Dilemma | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [lineup, setLineup]           = useState<Player[]>([]);
 
   useEffect(() => {
     loadGame().then(data => {
@@ -173,6 +176,11 @@ function App() {
     if (injuries.length > 0) setReport({ news: injuries });
   };
 
+  const handleConfirmLineup = (confirmed: Player[]) => {
+    setLineup(confirmed);
+    setScreen('match');
+  };
+
   if (appState === 'loading') {
     return (
       <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
@@ -196,16 +204,15 @@ function App() {
     );
   }
 
-  const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
-  const oppId     = getOpponentId(calendar, userClub.id);
-  const oppPlayers = players.filter(p => p.clubId === oppId);
-  const oppClub   = CLUBS.find(c => c.id === oppId);
-  const lastRound = calendar && calendar.currentRound > 1
-    ? calendar.rounds[calendar.currentRound - 2]
-    : null;
+  const mySquadPlayers  = players.filter(p => p.clubId === userClub.id);
+  const activePlayers   = lineup.length === 11 ? lineup : mySquadPlayers;
+  const oppId           = getOpponentId(calendar, userClub.id);
+  const oppPlayers      = players.filter(p => p.clubId === oppId);
+  const oppClub         = CLUBS.find(c => c.id === oppId);
+  const lastRound       = calendar && calendar.currentRound > 1
+    ? calendar.rounds[calendar.currentRound - 2] : null;
   const allPlayedMatches = calendar
-    ? calendar.rounds.flat().filter(m => m.played)
-    : [];
+    ? calendar.rounds.flat().filter(m => m.played) : [];
 
   const counts = {
     ALL: mySquadPlayers.length,
@@ -215,14 +222,11 @@ function App() {
     ATT: mySquadPlayers.filter(p => p.position === 'ATT').length,
   };
   const visible = filter === 'ALL'
-    ? mySquadPlayers
-    : mySquadPlayers.filter(p => p.position === filter);
+    ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
-      {report && (
-        <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />
-      )}
+      {report && <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />}
       {dilemma && !report && (
         <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />
       )}
@@ -272,7 +276,7 @@ function App() {
                 userClub={userClub}
                 clubs={CLUBS}
                 players={players}
-                onGoToMatch={() => setScreen('match')}
+                onGoToMatch={() => setScreen('lineup')}
               />
             )}
             <div>
@@ -288,11 +292,19 @@ function App() {
           </div>
         )}
 
+        {screen === 'lineup' && (
+          <LineupScreen
+            players={mySquadPlayers}
+            onConfirm={handleConfirmLineup}
+            onBack={() => setScreen('squad')}
+          />
+        )}
+
         {screen === 'match' && (
           <div>
             {oppId && oppPlayers.length > 0 ? (
               <MatchScreen
-                homePlayers={mySquadPlayers}
+                homePlayers={activePlayers}
                 awayPlayers={oppPlayers}
                 homeTeamName={userClub.name}
                 awayTeamName={oppClub?.name ?? 'Adversário'}

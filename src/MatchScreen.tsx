@@ -12,20 +12,20 @@ interface Props {
 }
 
 export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamName, onBack }: Props) => {
-  const [events, setEvents] = useState<MatchEvent[]>([]);
+  const [events, setEvents]       = useState<MatchEvent[]>([]);
   const [homeGoals, setHomeGoals] = useState(0);
   const [awayGoals, setAwayGoals] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [done, setDone] = useState(false);
+  const [running, setRunning]     = useState(false);
+  const [done, setDone]           = useState(false);
 
-  const startMatch = () => {
+  const startMatch = (lineup: Player[]) => {
     setRunning(true);
     setDone(false);
     setEvents([]);
     setHomeGoals(0);
     setAwayGoals(0);
 
-    const result = simulateMatch(homePlayers, awayPlayers, homeTeamName, awayTeamName);
+    const result = simulateMatch(lineup, awayPlayers, homeTeamName, awayTeamName);
     let i = 0;
 
     const interval = setInterval(() => {
@@ -46,7 +46,7 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
         if (a) setAwayGoals(Number(a));
       }
       i++;
-    }, 800);
+    }, 700);
   };
 
   return (
@@ -72,7 +72,7 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
       {/* Botão iniciar */}
       {!running && !done && (
         <div className="text-center mb-6">
-          <button onClick={startMatch}
+          <button onClick={() => startMatch(homePlayers)}
             className="bg-[#2DFFA8] text-[#0B0F14] font-black px-8 py-2.5 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
             ▶ Iniciar Partida
           </button>
@@ -83,14 +83,10 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
       <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
         {events.map((ev, i) => (
           <div key={i} className={`px-3 py-2 rounded-lg text-xs transition-all
-            ${ev.text.startsWith('⚽')
-              ? 'bg-[rgba(45,255,168,0.08)] text-[#2DFFA8] font-semibold'
-              : ev.text.startsWith('🧱')
-              ? 'bg-[rgba(251,191,36,0.06)] text-[#FBBF24]'
-              : ev.text.startsWith('⚠️')
-              ? 'bg-[rgba(56,189,248,0.06)] text-[#38BDF8]'
-              : 'bg-white/[0.02] text-[#8B97A3]'
-            }`}>
+            ${ev.text.startsWith('⚽') ? 'bg-[rgba(45,255,168,0.08)] text-[#2DFFA8] font-semibold'
+            : ev.text.startsWith('🧱') ? 'bg-[rgba(251,191,36,0.06)] text-[#FBBF24]'
+            : ev.text.startsWith('⚠️') ? 'bg-[rgba(56,189,248,0.06)] text-[#38BDF8]'
+            : 'bg-white/[0.02] text-[#8B97A3]'}`}>
             {ev.text}
           </div>
         ))}
@@ -99,7 +95,7 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
       {/* Botões pós-jogo */}
       {done && (
         <div className="flex gap-3 mt-5 justify-center">
-          <button onClick={startMatch}
+          <button onClick={() => startMatch(homePlayers)}
             className="bg-white/[0.06] text-[#E6EDF3] border border-white/10 rounded-full px-6 py-2 text-xs font-bold hover:bg-white/10 transition-all cursor-pointer">
             🔄 Repetir
           </button>
