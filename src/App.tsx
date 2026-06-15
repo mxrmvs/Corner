@@ -11,24 +11,28 @@ import { ClubScreen } from './ClubScreen';
 import { TransferMarket } from './TransferMarket';
 import { SeasonReport } from './SeasonReport';
 import { DilemmaModal } from './DilemmaModal';
+import { TrainingScreen } from './TrainingScreen';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
 import { evolveSquad } from './evolution';
 import { rollDilemma } from './dilemmas';
+import { applySquadTraining } from './training';
+import type { TrainingFocus } from './training';
 import type { DilemmaChoice, Dilemma } from './dilemmas';
 import { saveGame, loadGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
-type Screen = 'squad' | 'match' | 'table' | 'club' | 'market';
+type Screen = 'squad' | 'match' | 'table' | 'club' | 'market' | 'training';
 
 const NAV: { label: string; value: Screen }[] = [
-  { label: '👥 Elenco',  value: 'squad'  },
-  { label: '⚽ Partida', value: 'match'  },
-  { label: '📊 Tabela',  value: 'table'  },
-  { label: '🏟️ Clube',   value: 'club'   },
-  { label: '🛒 Mercado', value: 'market' },
+  { label: '👥 Elenco',   value: 'squad'    },
+  { label: '⚽ Partida',  value: 'match'    },
+  { label: '📊 Tabela',   value: 'table'    },
+  { label: '🏟️ Clube',    value: 'club'     },
+  { label: '🛒 Mercado',  value: 'market'   },
+  { label: '🏋️ Treino',   value: 'training' },
 ];
 
 function App() {
@@ -82,17 +86,14 @@ function App() {
 
   const handleDilemmaChoice = (choice: DilemmaChoice) => {
     setPlayers(prev => prev.map(p => {
-      if (p.id === dilemma?.subjectId) {
+      if (p.id === dilemma?.subjectId)
         return { ...p, morale: Math.max(0, Math.min(100, p.morale + choice.moraleEffect)) };
-      }
-      if (choice.squadEffect !== 0) {
+      if (choice.squadEffect !== 0)
         return { ...p, morale: Math.max(0, Math.min(100, p.morale + choice.squadEffect)) };
-      }
       return p;
     }));
-    if (choice.balanceEffect !== 0) {
+    if (choice.balanceEffect !== 0)
       setUserClub(prev => ({ ...prev, balance: prev.balance + choice.balanceEffect }));
-    }
     setDilemma(null);
   };
 
@@ -119,8 +120,13 @@ function App() {
     setUserClub(prev => ({ ...prev, balance: prev.balance + p.marketValue }));
   };
 
-  const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
+  const handleTraining = (focusMap: Record<string, TrainingFocus>) => {
+    const { players: trained, injuries } = applySquadTraining(players, focusMap);
+    setPlayers(trained);
+    if (injuries.length > 0) setReport({ news: injuries });
+  };
 
+  const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
   const counts = {
     ALL: mySquadPlayers.length,
     GK:  mySquadPlayers.filter(p => p.position === 'GK').length,
@@ -128,7 +134,6 @@ function App() {
     MID: mySquadPlayers.filter(p => p.position === 'MID').length,
     ATT: mySquadPlayers.filter(p => p.position === 'ATT').length,
   };
-
   const visible = filter === 'ALL' ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
 
   return (
@@ -194,6 +199,12 @@ function App() {
             userClub={userClub}
             onBuy={handleBuy}
             onSell={handleSell}
+          />
+        )}
+        {screen === 'training' && (
+          <TrainingScreen
+            players={players}
+            onApply={handleTraining}
           />
         )}
       </main>
