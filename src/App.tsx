@@ -8,6 +8,7 @@ import { SquadFilter } from './SquadFilter';
 import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
 import { ClubScreen } from './ClubScreen';
+import { ClubSelect } from './ClubSelect';
 import { TransferMarket } from './TransferMarket';
 import { SeasonReport } from './SeasonReport';
 import { DilemmaModal } from './DilemmaModal';
@@ -36,6 +37,7 @@ const NAV: { label: string; value: Screen }[] = [
 ];
 
 function App() {
+  const [started, setStarted]     = useState(false);
   const [screen, setScreen]       = useState<Screen>('squad');
   const [filter, setFilter]       = useState<PositionFilter>('ALL');
   const [calendar, setCalendar]   = useState<Calendar | null>(null);
@@ -47,6 +49,7 @@ function App() {
   const [report, setReport]       = useState<{ news: string[] } | null>(null);
   const [dilemma, setDilemma]     = useState<Dilemma | null>(null);
 
+  // tenta carregar save existente
   useEffect(() => {
     loadGame().then(data => {
       if (data) {
@@ -55,9 +58,7 @@ function App() {
         setSeason(data.season);
         if (data.players)  setPlayers(data.players);
         if (data.userClub) setUserClub(data.userClub);
-      } else {
-        setCalendar(generateCalendar());
-        setStandings(computeStandings([]));
+        setStarted(true); // já tem save, pula a seleção
       }
     });
   }, []);
@@ -69,6 +70,13 @@ function App() {
       setTimeout(() => setSaved(false), 2000);
     });
   }, [calendar, standings, season, players, userClub]);
+
+  const handleSelectClub = (club: Club) => {
+    setUserClub(club);
+    setCalendar(generateCalendar());
+    setStandings(computeStandings([]));
+    setStarted(true);
+  };
 
   const simulateRound = () => {
     if (!calendar) return;
@@ -125,6 +133,11 @@ function App() {
     setPlayers(trained);
     if (injuries.length > 0) setReport({ news: injuries });
   };
+
+  // tela de seleção de clube
+  if (!started) {
+    return <ClubSelect clubs={CLUBS} onSelect={handleSelectClub} />;
+  }
 
   const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
   const counts = {
@@ -202,10 +215,7 @@ function App() {
           />
         )}
         {screen === 'training' && (
-          <TrainingScreen
-            players={players}
-            onApply={handleTraining}
-          />
+          <TrainingScreen players={players} onApply={handleTraining} />
         )}
       </main>
     </div>
