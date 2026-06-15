@@ -4,6 +4,7 @@ import { PLAYERS } from './players';
 import { PlayerCard } from './PlayerCard';
 import { SquadFilter } from './SquadFilter';
 import { MatchScreen } from './MatchScreen';
+import { LeagueTable } from './LeagueTable';
 
 const counts = {
   ALL: PLAYERS.length,
@@ -13,7 +14,13 @@ const counts = {
   ATT: PLAYERS.filter(p => p.position === 'ATT').length,
 };
 
-type Screen = 'squad' | 'match';
+type Screen = 'squad' | 'match' | 'table';
+
+const NAV: { label: string; value: Screen }[] = [
+  { label: '👥 Elenco',  value: 'squad' },
+  { label: '⚽ Partida', value: 'match' },
+  { label: '📊 Tabela',  value: 'table' },
+];
 
 function App() {
   const [filter, setFilter] = useState<PositionFilter>('ALL');
@@ -28,18 +35,25 @@ function App() {
       {/* Header */}
       <header className="border-b border-white/[0.06] px-6 py-4 flex justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
         <div>
-          <h1 className="text-2xl font-black tracking-[0.15em] text-[#E6EDF3]">CORNER</h1>
+          <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
           <p className="text-xs text-[#8B97A3] mt-0.5">Simulador de Carreira de Técnico</p>
         </div>
-        <button
-          onClick={() => setScreen(screen === 'squad' ? 'match' : 'squad')}
-          className="bg-[#2DFFA8] text-[#0B0F14] font-black px-5 py-2 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
-          {screen === 'squad' ? '⚽ Simular Partida' : '← Elenco'}
-        </button>
+        {/* Nav */}
+        <nav className="flex gap-2">
+          {NAV.map(({ label, value }) => (
+            <button key={value} onClick={() => setScreen(value)}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer
+                ${screen === value
+                  ? 'bg-[#2DFFA8] text-[#0B0F14]'
+                  : 'bg-white/[0.06] text-[#8B97A3] hover:bg-white/10 hover:text-[#E6EDF3]'
+                }`}>
+              {label}
+            </button>
+          ))}
+        </nav>
       </header>
 
       <main className="px-6 py-8 max-w-7xl mx-auto">
-        {/* Tela de Elenco */}
         {screen === 'squad' && (
           <div>
             <div className="flex justify-between items-center mb-6">
@@ -55,7 +69,6 @@ function App() {
           </div>
         )}
 
-        {/* Tela de Partida */}
         {screen === 'match' && (
           <MatchScreen
             homePlayers={PLAYERS}
@@ -64,6 +77,10 @@ function App() {
             awayTeamName="Rival FC"
             onBack={() => setScreen('squad')}
           />
+        )}
+
+        {screen === 'table' && (
+          <LeagueTable userClubId="c1" />
         )}
       </main>
     </div>
