@@ -4,9 +4,6 @@ import { effectiveRating } from './types';
 import { PLAYERS as INITIAL_PLAYERS } from './players';
 import { CLUBS } from './clubs';
 import type { Club } from './clubs';
-import { PlayerCard } from './PlayerCard';
-import { SquadFilter } from './SquadFilter';
-import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
 import { ClubScreen } from './ClubScreen';
 import { ClubSelect } from './ClubSelect';
@@ -70,7 +67,7 @@ function isHomeGame(calendar: Calendar | null, userClubId: string): boolean {
 function App() {
   const [appState, setAppState]           = useState<AppState>('loading');
   const [screen, setScreen]               = useState<Screen>('squad');
-  const [filter, setFilter]               = useState<PositionFilter>('ALL');
+  
   const [calendar, setCalendar]           = useState<Calendar | null>(null);
   const [standings, setStandings]         = useState<ClubStanding[]>([]);
   const [season, setSeason]               = useState(1);
@@ -287,9 +284,9 @@ function App() {
 
   // ── Jogo ──
   const mySquadPlayers   = players.filter(p => p.clubId === userClub.id);
-  const activePlayers    = lineup.length === 11 ? lineup : mySquadPlayers;
+  
   const oppId            = getOpponentId(calendar, userClub.id);
-  const oppPlayers       = players.filter(p => p.clubId === oppId);
+  
   const oppClub          = CLUBS.find(c => c.id === oppId);
   const lastRound        = calendar && calendar.currentRound > 1
     ? calendar.rounds[calendar.currentRound - 2] : null;
@@ -298,14 +295,14 @@ function App() {
   const oppOvr           = teamOvr(oppId, players);
   const isHome           = isHomeGame(calendar, userClub.id);
 
-  const counts = {
+  // const counts = {
     ALL: mySquadPlayers.length,
     GK:  mySquadPlayers.filter(p => p.position === 'GK').length,
     DEF: mySquadPlayers.filter(p => p.position === 'DEF').length,
     MID: mySquadPlayers.filter(p => p.position === 'MID').length,
     ATT: mySquadPlayers.filter(p => p.position === 'ATT').length,
   };
-  const visible = filter === 'ALL' ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
+  // const visible = filter === 'ALL' ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
 
   return (
     <>
