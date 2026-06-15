@@ -15,6 +15,7 @@ import { DilemmaModal } from './DilemmaModal';
 import { TrainingScreen } from './TrainingScreen';
 import { RoundResults } from './RoundResults';
 import { NextMatch } from './NextMatch';
+import { MatchHistory } from './MatchHistory';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
@@ -27,13 +28,14 @@ import { saveGame, loadGame, deleteGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
-type Screen = 'squad' | 'match' | 'table' | 'club' | 'market' | 'training';
+type Screen = 'squad' | 'match' | 'table' | 'club' | 'market' | 'training' | 'history';
 type AppState = 'loading' | 'select' | 'playing';
 
 const NAV: { label: string; value: Screen }[] = [
   { label: '👥 Elenco',   value: 'squad'    },
   { label: '⚽ Partida',  value: 'match'    },
   { label: '📊 Tabela',   value: 'table'    },
+  { label: '📋 Histórico',value: 'history'  },
   { label: '🏟️ Clube',    value: 'club'     },
   { label: '🛒 Mercado',  value: 'market'   },
   { label: '🏋️ Treino',   value: 'training' },
@@ -195,12 +197,15 @@ function App() {
   }
 
   const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
-  const oppId = getOpponentId(calendar, userClub.id);
+  const oppId     = getOpponentId(calendar, userClub.id);
   const oppPlayers = players.filter(p => p.clubId === oppId);
-  const oppClub = CLUBS.find(c => c.id === oppId);
+  const oppClub   = CLUBS.find(c => c.id === oppId);
   const lastRound = calendar && calendar.currentRound > 1
     ? calendar.rounds[calendar.currentRound - 2]
     : null;
+  const allPlayedMatches = calendar
+    ? calendar.rounds.flat().filter(m => m.played)
+    : [];
 
   const counts = {
     ALL: mySquadPlayers.length,
@@ -215,7 +220,9 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
-      {report && <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />}
+      {report && (
+        <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />
+      )}
       {dilemma && !report && (
         <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />
       )}
@@ -314,6 +321,14 @@ function App() {
             onSimulateRound={simulateRound}
             onNewSeason={handleNewSeason}
             onShowResults={() => setShowResults(true)}
+          />
+        )}
+
+        {screen === 'history' && (
+          <MatchHistory
+            matches={allPlayedMatches}
+            clubs={CLUBS}
+            userClubId={userClub.id}
           />
         )}
 
