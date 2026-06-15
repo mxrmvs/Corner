@@ -3,7 +3,7 @@ import type { ClubStanding } from './leagueTypes';
 const rowBg = (i: number, isUser: boolean) => {
   if (isUser) return 'bg-[rgba(45,255,168,0.06)] border-l-2 border-[#2DFFA8]';
   if (i < 4)  return 'bg-white/[0.01]';
-  if (i >= 10) return 'bg-[rgba(251,100,107,0.04)]';
+  if (i >= 16) return 'bg-[rgba(251,100,107,0.04)]';
   return '';
 };
 
@@ -14,9 +14,13 @@ interface Props {
   totalRounds: number;
   onSimulateRound: () => void;
   onNewSeason: () => void;
+  onShowResults: () => void;
 }
 
-export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalRounds, onSimulateRound, onNewSeason }: Props) => {
+export const LeagueTable = ({
+  standings, userClubId = 'fla', currentRound, totalRounds,
+  onSimulateRound, onNewSeason, onShowResults,
+}: Props) => {
   const userPos = standings.findIndex(s => s.clubId === userClubId);
   const finished = currentRound > totalRounds;
 
@@ -24,16 +28,22 @@ export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalR
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-lg font-bold">Tabela da Liga</h2>
+          <h2 className="text-lg font-bold">Brasileirão Série A</h2>
           <p className="text-xs text-[#8B97A3] mt-0.5">
             {finished ? 'Temporada encerrada' : `Rodada ${currentRound} de ${totalRounds}`}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {userPos >= 0 && (
             <span className="text-xs text-[#8B97A3]">
               Você: <span className="text-[#2DFFA8] font-bold">{userPos + 1}º</span>
             </span>
+          )}
+          {currentRound > 1 && (
+            <button onClick={onShowResults}
+              className="bg-white/[0.06] text-[#E6EDF3] border border-white/10 font-bold px-4 py-2 rounded-full text-xs hover:bg-white/10 transition-all cursor-pointer">
+              📋 Rodada {currentRound - 1}
+            </button>
           )}
           {!finished && (
             <button onClick={onSimulateRound}
@@ -52,10 +62,10 @@ export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalR
 
       <div className="flex gap-4 mb-4 text-xs text-[#8B97A3]">
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#2DFFA8]" /> Libertadores
+          <span className="w-2 h-2 rounded-full bg-[#2DFFA8]" /> Libertadores (top 6)
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#FB5C6B]" /> Rebaixamento
+          <span className="w-2 h-2 rounded-full bg-[#FB5C6B]" /> Rebaixamento (17-20)
         </span>
       </div>
 
@@ -78,7 +88,8 @@ export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalR
           return (
             <div key={s.clubId}
               className={`grid grid-cols-[2rem_1fr_repeat(7,3rem)] px-4 py-3 border-b border-white/[0.04] last:border-0 text-sm hover:bg-white/[0.03] transition-colors ${rowBg(i, isUser)}`}>
-              <span className={`font-bold tabular-nums ${i < 4 ? 'text-[#2DFFA8]' : i >= 10 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
+              <span className={`font-bold tabular-nums
+                ${i < 6 ? 'text-[#2DFFA8]' : i >= 16 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
                 {i + 1}
               </span>
               <span className={`font-semibold truncate ${isUser ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
@@ -88,7 +99,8 @@ export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalR
               <span className="text-center text-[#E6EDF3] tabular-nums font-medium">{s.wins}</span>
               <span className="text-center text-[#8B97A3] tabular-nums">{s.draws}</span>
               <span className="text-center text-[#8B97A3] tabular-nums">{s.losses}</span>
-              <span className={`text-center tabular-nums font-medium ${sg > 0 ? 'text-[#2DFFA8]' : sg < 0 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
+              <span className={`text-center tabular-nums font-medium
+                ${sg > 0 ? 'text-[#2DFFA8]' : sg < 0 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
                 {sg > 0 ? `+${sg}` : sg}
               </span>
               <span className="text-center text-[#8B97A3] tabular-nums">{s.goalsFor}</span>
