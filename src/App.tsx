@@ -11,10 +11,13 @@ import { LeagueTable } from './LeagueTable';
 import { ClubScreen } from './ClubScreen';
 import { TransferMarket } from './TransferMarket';
 import { SeasonReport } from './SeasonReport';
+import { DilemmaModal } from './DilemmaModal';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
 import { evolveSquad } from './evolution';
+import { rollDilemma } from './dilemmas';
+import type { DilemmaChoice, Dilemma } from './dilemmas';
 import { saveGame, loadGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
@@ -39,6 +42,7 @@ function App() {
   const [players, setPlayers]       = useState<Player[]>(INITIAL_PLAYERS);
   const [userClub, setUserClub]     = useState<Club>(CLUBS[0]);
   const [report, setReport]         = useState<{ news: string[] } | null>(null);
+  const [dilemma, setDilemma]       = useState<Dilemma | null>(null);
 
   useEffect(() => {
     loadGame().then(data => {
@@ -67,16 +71,37 @@ function App() {
     if (!calendar) return;
     const { rounds, currentRound } = calendar;
     if (currentRound > rounds.length) return;
+
     const updatedRound = rounds[currentRound - 1].map(simulateMatch);
     const updatedRounds = [...rounds];
     updatedRounds[currentRound - 1] = updatedRound;
     const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
     setCalendar(newCal);
     setStandings(computeStandings(updatedRounds.flat()));
+
+    // rola dilema após simular rodada
+    const d = rollDilemma(players);
+    if (d) setDilemma(d);
+  };
+
+  const handleDilemmaChoice = (choice: DilemmaChoice) => {
+    // aplica efeitos de moral e caixa
+    setPlayers(prev => prev.map(p => {
+      if (p.id === dilemma?.subjectId) {
+        return { ...p, morale: Math.max(0, Math.min(100, (p.morale ?? 70) + choice.moraleEffect)) };
+      }
+      if (choice.squadEffect !== 0) {
+        return { ...p, morale: Math.max(0, Math.min(100, (p.morale ?? 70) + choice.squadEffect)) };
+      }
+      return p;
+    }));
+    if (choice.balanceEffect !== 0) {
+      setUserClub(prev => ({ ...prev, balance: prev.balance + choice.balanceEffect }));
+    }
+    setDilemma(null);
   };
 
   const handleNewSeason = () => {
-    // evolui todos os jogadores e mostra relatório
     const { players: evolved, news } = evolveSquad(players);
     setPlayers(evolved);
     setReport({ news });
@@ -116,12 +141,19 @@ function App() {
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
 
-      {/* Modal de relatório de temporada */}
+      {/* Modais */}
       {report && (
         <SeasonReport
           news={report.news}
           season={season}
           onClose={confirmNewSeason}
+        />
+      )}
+      {dilemma && !report && (
+        <DilemmaModal
+          dilemma={dilemma}
+          players={players}
+          onChoose={handleDilemmaChoice}
         />
       )}
 
@@ -198,10 +230,3 @@ function App() {
             onBuy={handleBuy}
             onSell={handleSell}
           />
-        )}
-      </main>
-    </div>
-  );
-}
-
-export default App;
