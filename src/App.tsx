@@ -61,35 +61,33 @@ function isHomeGame(calendar: Calendar | null, userClubId: string): boolean {
   const round = calendar.rounds[calendar.currentRound - 1];
   if (!round) return true;
   const match = round.find(m => m.homeClubId === userClubId || m.awayClubId === userClubId);
-  return match?.homeClubId === userClubId ?? true;
+  return match ? match.homeClubId === userClubId : true;
 }
 
 function App() {
-  const [appState, setAppState]           = useState<AppState>('loading');
-  const [screen, setScreen]               = useState<Screen>('squad');
-  
-  const [calendar, setCalendar]           = useState<Calendar | null>(null);
-  const [standings, setStandings]         = useState<ClubStanding[]>([]);
-  const [season, setSeason]               = useState(1);
-  const [saved, setSaved]                 = useState(false);
-  const [players, setPlayers]             = useState<Player[]>(INITIAL_PLAYERS);
-  const [userClub, setUserClub]           = useState<Club>(CLUBS[0]);
-  const [report, setReport]               = useState<{ news: string[] } | null>(null);
-  const [dilemma, setDilemma]             = useState<Dilemma | null>(null);
-  const [showResults, setShowResults]     = useState(false);
-  const [lineup, setLineup]               = useState<Player[]>([]);
-  const [achievements, setAchievements]   = useState<Achievement[]>([]);
+  const [appState, setAppState]         = useState<AppState>('loading');
+  const [screen, setScreen]             = useState<Screen>('squad');
+  const [calendar, setCalendar]         = useState<Calendar | null>(null);
+  const [standings, setStandings]       = useState<ClubStanding[]>([]);
+  const [season, setSeason]             = useState(1);
+  const [saved, setSaved]               = useState(false);
+  const [players, setPlayers]           = useState<Player[]>(INITIAL_PLAYERS);
+  const [userClub, setUserClub]         = useState<Club>(CLUBS[0]);
+  const [report, setReport]             = useState<{ news: string[] } | null>(null);
+  const [dilemma, setDilemma]           = useState<Dilemma | null>(null);
+  const [showResults, setShowResults]   = useState(false);
+  const [lineup, setLineup]             = useState<Player[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<Division>('A');
-  const [news, setNews]                   = useState<NewsItem[]>([]);
-  const [hasSave, setHasSave]             = useState(false);
-  const [savedInfo, setSavedInfo]         = useState<{ club: string; season: number; pos: number; wins: number; pts: number } | null>(null);
-  const seedRef                           = useRef<string>(generateSeed());
+  const [news, setNews]                 = useState<NewsItem[]>([]);
+  const [hasSave, setHasSave]           = useState(false);
+  const [savedInfo, setSavedInfo]       = useState<{ club: string; season: number; pos: number; wins: number; pts: number } | null>(null);
+  const seedRef                         = useRef<string>(generateSeed());
 
   useEffect(() => {
     loadGame().then(data => {
       if (data) {
         setHasSave(true);
-        // calcula posição salva para mostrar na splash
         const pos = data.standings.findIndex(s => s.clubId === data.userClub?.id) + 1;
         const standing = data.standings.find(s => s.clubId === data.userClub?.id);
         setSavedInfo({
@@ -112,7 +110,8 @@ function App() {
     });
   }, [calendar, standings, season, players, userClub]);
 
-  const addNews = (items: NewsItem[]) => setNews(prev => [...items, ...prev].slice(0, 50));
+  const addNews = (items: NewsItem[]) =>
+    setNews(prev => [...items, ...prev].slice(0, 50));
 
   const handleContinue = () => {
     loadGame().then(data => {
@@ -160,20 +159,17 @@ function App() {
     setCalendar(newCal);
     setStandings(newStandings);
 
-    // gera notícia do resultado do userClub
-    const userMatch = updatedRound.find(m => m.homeClubId === userClub.id || m.awayClubId === userClub.id);
+    const userMatch = updatedRound.find(m =>
+      m.homeClubId === userClub.id || m.awayClubId === userClub.id
+    );
     if (userMatch) {
       const isHome = userMatch.homeClubId === userClub.id;
-      const myGoals = isHome ? userMatch.homeGoals! : userMatch.awayGoals!;
+      const myGoals  = isHome ? userMatch.homeGoals! : userMatch.awayGoals!;
       const oppGoals = isHome ? userMatch.awayGoals! : userMatch.homeGoals!;
-      const oppName = CLUBS.find(c => c.id === (isHome ? userMatch.awayClubId : userMatch.homeClubId))?.name ?? 'Adversário';
-      const result = myGoals > oppGoals ? 'win' : myGoals < oppGoals ? 'loss' : 'draw';
-      const prefix = result === 'win' ? 'Vitória' : result === 'loss' ? 'Derrota' : 'Empate';
-      addNews([{
-        id: `r${currentRound}`,
-        text: `Rod. ${currentRound} · ${prefix} ${myGoals}x${oppGoals} vs ${oppName}`,
-        type: result,
-      }]);
+      const oppName  = CLUBS.find(c => c.id === (isHome ? userMatch.awayClubId : userMatch.homeClubId))?.name ?? 'Adversário';
+      const result   = myGoals > oppGoals ? 'win' : myGoals < oppGoals ? 'loss' : 'draw';
+      const prefix   = result === 'win' ? 'Vitória' : result === 'loss' ? 'Derrota' : 'Empate';
+      addNews([{ id: `r${currentRound}`, text: `Rod. ${currentRound} · ${prefix} ${myGoals}x${oppGoals} vs ${oppName}`, type: result }]);
     }
 
     const currStanding = newStandings.find(s => s.clubId === userClub.id);
@@ -237,7 +233,6 @@ function App() {
     setScreen('squad');
   };
 
-  // ── Loading ──
   if (appState === 'loading') {
     return (
       <div className="min-h-screen bg-[#F2EDE4] flex items-center justify-center">
@@ -252,7 +247,6 @@ function App() {
     );
   }
 
-  // ── Splash ──
   if (appState === 'splash') {
     return (
       <SplashScreen
@@ -269,7 +263,6 @@ function App() {
     );
   }
 
-  // ── Seleção de clube ──
   if (appState === 'select') {
     return (
       <ClubSelect
@@ -282,11 +275,8 @@ function App() {
     );
   }
 
-  // ── Jogo ──
   const mySquadPlayers   = players.filter(p => p.clubId === userClub.id);
-  
   const oppId            = getOpponentId(calendar, userClub.id);
-  
   const oppClub          = CLUBS.find(c => c.id === oppId);
   const lastRound        = calendar && calendar.currentRound > 1
     ? calendar.rounds[calendar.currentRound - 2] : null;
@@ -295,19 +285,12 @@ function App() {
   const oppOvr           = teamOvr(oppId, players);
   const isHome           = isHomeGame(calendar, userClub.id);
 
-  // const counts = {
-    ALL: mySquadPlayers.length,
-    GK:  mySquadPlayers.filter(p => p.position === 'GK').length,
-    DEF: mySquadPlayers.filter(p => p.position === 'DEF').length,
-    MID: mySquadPlayers.filter(p => p.position === 'MID').length,
-    ATT: mySquadPlayers.filter(p => p.position === 'ATT').length,
-  };
-  // const visible = filter === 'ALL' ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
-
   return (
     <>
       {report && <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />}
-      {dilemma && !report && <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />}
+      {dilemma && !report && (
+        <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />
+      )}
       {showResults && lastRound && (
         <RoundResults matches={lastRound} clubs={CLUBS} userClubId={userClub.id}
           round={calendar!.currentRound - 1} onClose={() => setShowResults(false)} />
@@ -338,14 +321,23 @@ function App() {
         onExit={() => { deleteGame(); window.location.reload(); }}
       >
         {screen === 'lineup' && (
-          <LineupScreen players={mySquadPlayers} onConfirm={handleConfirmLineup} onBack={() => setScreen('squad')} />
+          <LineupScreen
+            players={mySquadPlayers}
+            onConfirm={handleConfirmLineup}
+            onBack={() => setScreen('squad')}
+          />
         )}
         {screen === 'table' && calendar && (
           <div className="overflow-x-auto">
-            <LeagueTable standings={standings} userClubId={userClub.id}
-              currentRound={calendar.currentRound} totalRounds={calendar.rounds.length}
-              onSimulateRound={simulateRound} onNewSeason={handleNewSeason}
-              onShowResults={() => setShowResults(true)} />
+            <LeagueTable
+              standings={standings}
+              userClubId={userClub.id}
+              currentRound={calendar.currentRound}
+              totalRounds={calendar.rounds.length}
+              onSimulateRound={simulateRound}
+              onNewSeason={handleNewSeason}
+              onShowResults={() => setShowResults(true)}
+            />
           </div>
         )}
         {screen === 'history' && (
@@ -355,7 +347,9 @@ function App() {
         {screen === 'market' && (
           <TransferMarket allPlayers={players} userClub={userClub} onBuy={handleBuy} onSell={handleSell} />
         )}
-        {screen === 'training' && <TrainingScreen players={players} onApply={handleTraining} />}
+        {screen === 'training' && (
+          <TrainingScreen players={players} onApply={handleTraining} />
+        )}
       </Dashboard>
     </>
   );
