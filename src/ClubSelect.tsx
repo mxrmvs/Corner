@@ -1,91 +1,125 @@
-import type { Club } from './clubs';
+import type { Club } from '../clubs';
+import type { Division } from '../types';
 
 const fmt = (n: number) =>
-  n >= 1_000_000 ? `R$ ${(n / 1_000_000).toFixed(1)}M` : `R$ ${(n / 1_000).toFixed(0)}K`;
-
-const repLabel = (r: number) =>
-  r >= 80 ? '⭐⭐⭐ Elite' : r >= 70 ? '⭐⭐ Alto Nível' : r >= 60 ? '⭐ Médio' : '🔰 Modesto';
-
-const repColor = (r: number) =>
-  r >= 80 ? 'text-[#2DFFA8]' : r >= 70 ? 'text-[#38BDF8]' : r >= 60 ? 'text-[#FBBF24]' : 'text-[#8B97A3]';
+  n >= 1_000_000 ? `R$${(n / 1_000_000).toFixed(0)}M` : `R$${(n / 1_000).toFixed(0)}K`;
 
 interface Props {
   clubs: Club[];
   hasSave: boolean;
+  selectedDivision: Division;
+  onDivisionChange: (d: Division) => void;
   onSelect: (club: Club) => void;
   onContinue: () => void;
   onNewGame: () => void;
 }
 
-export const ClubSelect = ({ clubs, hasSave, onSelect, onContinue, onNewGame }: Props) => {
+const DIVISIONS: { value: Division; label: string }[] = [
+  { value: 'A', label: 'Série A' },
+  { value: 'B', label: 'Série B' },
+  { value: 'C', label: 'Série C' },
+];
+
+export const ClubSelect = ({
+  clubs, hasSave, selectedDivision,
+  onDivisionChange, onSelect, onContinue, onNewGame,
+}: Props) => {
+  const filtered = clubs.filter(c => c.division === selectedDivision);
+
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans flex flex-col items-center justify-center px-6 py-12">
-      <div className="text-center mb-10">
-        <h1 className="text-5xl font-black tracking-[0.15em] text-[#E6EDF3]">CORNER</h1>
-        <p className="text-[#8B97A3] mt-2 text-sm">Simulador de Carreira de Técnico</p>
-        <div className="w-16 h-0.5 bg-[#2DFFA8] mx-auto mt-4" />
-      </div>
-
-      {/* Botões de save */}
-      {hasSave && (
-        <div className="flex gap-3 mb-8">
-          <button onClick={onContinue}
-            className="bg-[#2DFFA8] text-[#0B0F14] font-black px-8 py-3 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
-            ▶ Continuar Jogo
-          </button>
-          <button onClick={onNewGame}
-            className="bg-white/[0.06] text-[#8B97A3] border border-white/10 font-bold px-6 py-3 rounded-full text-sm hover:bg-white/10 transition-all cursor-pointer">
-            🔄 Novo Jogo
-          </button>
+    <div className="min-h-screen bg-[#F2EDE4] flex flex-col">
+      {/* Header */}
+      <header className="border-b border-[#1A1A1A] px-8 py-4 flex justify-between items-end">
+        <div>
+          <h1 className="font-display text-4xl font-black text-[#1A1A1A] leading-none">
+            CORNER
+          </h1>
+          <p className="text-xs text-[#6B6560] tracking-widest uppercase mt-1">
+            Simulador de Carreira · Brasileirão
+          </p>
         </div>
-      )}
+        {hasSave && (
+          <div className="flex gap-2">
+            <button onClick={onContinue}
+              className="bg-[#E8432D] text-white font-bold text-xs px-5 py-2.5 tracking-widest uppercase cursor-pointer hover:bg-[#D63520] transition-colors">
+              CONTINUAR →
+            </button>
+            <button onClick={onNewGame}
+              className="border border-[#1A1A1A] text-[#1A1A1A] font-bold text-xs px-4 py-2.5 tracking-widest uppercase cursor-pointer hover:bg-[#EDE8DF] transition-colors">
+              NOVO JOGO
+            </button>
+          </div>
+        )}
+      </header>
 
-      {!hasSave && (
-        <h2 className="text-lg font-bold mb-6">Escolha seu clube</h2>
-      )}
+      <main className="flex-1 px-8 py-8 max-w-4xl mx-auto w-full">
+        {/* Título */}
+        <div className="mb-8">
+          <h2 className="font-display text-2xl font-black text-[#1A1A1A]">
+            Escolha seu clube
+          </h2>
+          <p className="text-sm text-[#6B6560] mt-1">
+            Selecione a divisão e o time que você vai comandar
+          </p>
+        </div>
 
-      {(!hasSave) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl">
-          {clubs.map(club => (
-            <button key={club.id} onClick={() => onSelect(club)}
-              className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-5 text-left hover:border-[#2DFFA8]/40 hover:bg-[rgba(45,255,168,0.03)] transition-all cursor-pointer group">
-              <div className="flex justify-between items-start mb-3">
-                <span className="font-black text-base text-[#E6EDF3] group-hover:text-[#2DFFA8] transition-colors">
-                  {club.name}
-                </span>
-                <span className={`text-xs font-bold ${repColor(club.reputation)}`}>
-                  {club.reputation}
-                </span>
-              </div>
-              <div className={`text-xs font-bold mb-3 ${repColor(club.reputation)}`}>
-                {repLabel(club.reputation)}
-              </div>
-              <div className="flex flex-col gap-1 text-xs text-[#8B97A3]">
-                <div className="flex justify-between">
-                  <span>Caixa</span>
-                  <span className="text-[#38BDF8] font-medium">{fmt(club.balance)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Estádio</span>
-                  <span className="font-medium">{club.stadiumCapacity.toLocaleString()} lugares</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Estilo</span>
-                  <span className="font-medium">
-                    {club.tactical.style === 'TIKI_TAKA' ? 'Tiki-Taka'
-                     : club.tactical.style === 'COUNTER' ? 'Contra-Ataque'
-                     : 'Jogo Direto'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Formação</span>
-                  <span className="font-medium">{club.tactical.formation}</span>
-                </div>
-              </div>
+        {/* Seletor de divisão */}
+        <div className="flex gap-0 border border-[#1A1A1A] w-fit mb-6 overflow-hidden">
+          {DIVISIONS.map(({ value, label }) => (
+            <button key={value} onClick={() => onDivisionChange(value)}
+              className={`px-6 py-2 text-xs font-bold tracking-widest uppercase
+                border-r border-[#1A1A1A] last:border-0 cursor-pointer transition-colors
+                ${selectedDivision === value
+                  ? 'bg-[#1A1A1A] text-white'
+                  : 'bg-white text-[#1A1A1A] hover:bg-[#EDE8DF]'
+                }`}>
+              {label}
             </button>
           ))}
         </div>
-      )}
+
+        {/* Grid de clubes */}
+        <div className="border border-[#D6CFC4] bg-white overflow-hidden">
+          {/* Cabeçalho da tabela */}
+          <div className="grid grid-cols-[1fr_5rem_6rem_6rem] px-4 py-2 bg-[#1A1A1A] text-white text-2xs font-bold tracking-widest uppercase">
+            <span>Clube</span>
+            <span className="text-center">Rep.</span>
+            <span className="text-center">Caixa</span>
+            <span className="text-center">Estádio</span>
+          </div>
+
+          {filtered.map((club, i) => (
+            <button key={club.id} onClick={() => onSelect(club)}
+              className={`w-full grid grid-cols-[1fr_5rem_6rem_6rem] px-4 py-3
+                border-b border-[#D6CFC4] last:border-0 text-left
+                cursor-pointer transition-colors hover:bg-[#F2EDE4] group
+                ${i % 2 === 0 ? 'bg-white' : 'bg-[#FAF8F5]'}`}>
+              <span className="font-bold text-sm text-[#1A1A1A] group-hover:text-[#E8432D] transition-colors">
+                {club.name}
+              </span>
+              <span className="text-center text-sm font-bold text-[#1A1A1A]">
+                {club.reputation}
+              </span>
+              <span className="text-center text-sm text-[#6B6560]">
+                {fmt(club.balance)}
+              </span>
+              <span className="text-center text-sm text-[#6B6560]">
+                {(club.stadiumCapacity / 1000).toFixed(0)}k
+              </span>
+            </button>
+          ))}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-[#D6CFC4] px-8 py-3 flex justify-between items-center">
+        <span className="text-2xs text-[#9E9890] tracking-widest uppercase">
+          Corner · Brasileirão 2025
+        </span>
+        <span className="text-2xs text-[#9E9890]">
+          {clubs.length} clubes · {selectedDivision === 'A' ? '20' : selectedDivision === 'B' ? '20' : '20'} na Série {selectedDivision}
+        </span>
+      </footer>
     </div>
   );
 };

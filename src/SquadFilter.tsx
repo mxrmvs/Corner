@@ -1,11 +1,11 @@
-import type { PositionFilter } from './types';
+import type { PositionFilter } from '../types';
 
 const FILTERS: { label: string; value: PositionFilter }[] = [
-  { label: 'Todos', value: 'ALL' },
-  { label: 'GOL',   value: 'GK'  },
-  { label: 'ZAG',   value: 'DEF' },
-  { label: 'MEI',   value: 'MID' },
-  { label: 'ATA',   value: 'ATT' },
+  { label: 'ALL',  value: 'ALL' },
+  { label: 'GK',   value: 'GK'  },
+  { label: 'DEF',  value: 'DEF' },
+  { label: 'MID',  value: 'MID' },
+  { label: 'ATT',  value: 'ATT' },
 ];
 
 interface Props {
@@ -15,20 +15,18 @@ interface Props {
 }
 
 export const SquadFilter = ({ active, onChange, counts }: Props) => (
-  <div className="flex gap-2 flex-wrap mb-6">
-    {FILTERS.map(({ label, value }) => {
-      const isActive = active === value;
-      return (
-        <button key={value} onClick={() => onChange(value)}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-150 cursor-pointer
-            ${isActive
-              ? 'bg-[#2DFFA8] text-[#0B0F14]'
-              : 'bg-white/[0.06] text-[#8B97A3] hover:bg-white/10 hover:text-[#E6EDF3]'
-            }`}>
-          {label}
-          <span className="ml-1.5 opacity-60">{counts[value]}</span>
-        </button>
-      );
-    })}
+  <div className="flex gap-0 border border-[#D6CFC4] rounded overflow-hidden w-fit mb-3">
+    {FILTERS.map(({ label, value }) => (
+      <button key={value} onClick={() => onChange(value)}
+        className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase
+          border-r border-[#D6CFC4] last:border-0 transition-colors cursor-pointer
+          ${active === value
+            ? 'bg-[#1A1A1A] text-white'
+            : 'bg-white text-[#6B6560] hover:bg-[#EDE8DF]'
+          }`}>
+        {label}
+        <span className="ml-1 opacity-50 font-normal">{counts[value]}</span>
+      </button>
+    ))}
   </div>
 );

@@ -1,15 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base:     #0B0F14;
-  --bg-surface:  #131A22;
-  --text-primary: #E6EDF3;
-  --text-muted:  #8B97A3;
-  --neon:        #2DFFA8;
-  --cool:        #38BDF8;
-  --warn:        #FBBF24;
-  --danger:      #FB5C6B;
+  /* Paleta 7a0 */
+  --bg:          #F2EDE4;   /* bege creme — fundo geral */
+  --bg-card:     #FFFFFF;   /* cards brancos */
+  --bg-field:    #4A7C59;   /* verde campo */
+  --border:      #D6CFC4;   /* borda sutil */
+  --border-dark: #1A1A1A;   /* borda forte */
+
+  --text-primary:   #1A1A1A;  /* preto editorial */
+  --text-secondary: #6B6560;  /* cinza médio */
+  --text-muted:     #9E9890;  /* cinza claro */
+
+  --accent:      #E8432D;   /* vermelho coral — CTA principal */
+  --accent-gold: #C9A84C;   /* dourado — destaques secundários */
+  --accent-green: #4A7C59;  /* verde campo */
+
+  --font-display: 'Georgia', 'Times New Roman', serif;  /* editorial */
+  --font-body:    system-ui, sans-serif;
 }
 
-* { box-sizing: border-box; }
-body { background: var(--bg-base); color: var(--text-primary); font-family: system-ui, sans-serif; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tipografia editorial */
+.font-display { font-family: var(--font-display); }
+
+/* Scrollbar discreta */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

@@ -1,48 +1,73 @@
-import type { Player } from './types';
+import type { Player } from '../types';
+import { effectiveRating } from '../types';
 
-const POSITION_LABEL: Record<string, string> = {
-  GK: 'GOL', DEF: 'ZAG', MID: 'MEI', ATT: 'ATA',
+const POS: Record<string, string> = {
+  GK: 'GK', DEF: 'CB', MID: 'CM', ATT: 'ST',
 };
 
-const ratingColor = (v: number) => {
-  if (v >= 85) return 'bg-[rgba(45,255,168,0.15)] text-[#2DFFA8] ring-1 ring-[rgba(45,255,168,0.3)]';
-  if (v >= 75) return 'bg-[rgba(56,189,248,0.15)] text-[#38BDF8] ring-1 ring-[rgba(56,189,248,0.3)]';
-  if (v >= 65) return 'bg-[rgba(251,191,36,0.15)] text-[#FBBF24] ring-1 ring-[rgba(251,191,36,0.3)]';
-  return 'bg-white/5 text-[#8B97A3] ring-1 ring-white/10';
-};
+const ratingColor = (v: number) =>
+  v >= 85 ? 'text-[#E8432D] font-black'
+  : v >= 75 ? 'text-[#1A1A1A] font-black'
+  : 'text-[#6B6560] font-bold';
 
-const ratingTextColor = (v: number) => {
-  if (v >= 85) return 'text-[#2DFFA8]';
-  if (v >= 75) return 'text-[#38BDF8]';
-  if (v >= 65) return 'text-[#FBBF24]';
-  return 'text-[#8B97A3]';
-};
-
-const Badge = ({ label, value }: { label: string; value: number }) => (
-  <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold ${ratingColor(value)}`}>
-    <span className="opacity-60 font-medium">{label}</span>
-    {value}
-  </span>
-);
-
-export const PlayerCard = ({ player: p }: { player: Player }) => (
-  <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-5 w-64 flex flex-col gap-3 hover:border-white/20 hover:scale-[1.02] transition-all duration-200">
-    <div className="flex justify-between items-center">
-      <span className="bg-white/[0.06] text-[#8B97A3] rounded-lg px-2.5 py-0.5 text-xs font-bold tracking-wider">
-        {POSITION_LABEL[p.position]}
-      </span>
-      <span className={`text-4xl font-black tabular-nums ${ratingTextColor(p.currentRating)}`}>
-        {p.currentRating}
-      </span>
-    </div>
-    <div>
-      <div className="text-[#E6EDF3] font-bold text-base">{p.name}</div>
-      <div className="text-[#8B97A3] text-xs mt-0.5">{p.age} anos · {p.foot}</div>
-    </div>
-    <div className="flex gap-1.5 flex-wrap justify-center">
-      <Badge label="ATA" value={p.attributes.attack} />
-      <Badge label="DEF" value={p.attributes.defense} />
-      <Badge label="FÍS" value={p.attributes.physical} />
-    </div>
+const conditionBar = (value: number, color: string) => (
+  <div className="w-full h-0.5 bg-[#D6CFC4] rounded-full overflow-hidden">
+    <div
+      className={`h-full rounded-full transition-all ${color}`}
+      style={{ width: `${value}%` }}
+    />
   </div>
 );
+
+interface Props {
+  player: Player;
+  index?: number;
+  selected?: boolean;
+  onClick?: () => void;
+}
+
+export const PlayerCard = ({ player: p, index, selected, onClick }: Props) => {
+  const eff = effectiveRating(p);
+
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center gap-3 px-3 py-2.5 border-b border-[#D6CFC4] cursor-pointer
+        transition-colors hover:bg-[#EDE8DF] group
+        ${selected ? 'bg-[#E8432D] hover:bg-[#E8432D]' : 'bg-white'}`}>
+
+      {/* Número */}
+      {index !== undefined && (
+        <span className={`text-xs w-5 text-right shrink-0
+          ${selected ? 'text-white/70' : 'text-[#9E9890]'}`}>
+          #{index}
+        </span>
+      )}
+
+      {/* Posição */}
+      <span className={`text-2xs font-bold w-6 shrink-0
+        ${selected ? 'text-white/80' : 'text-[#9E9890]'}`}>
+        {POS[p.position]}
+      </span>
+
+      {/* Nome */}
+      <span className={`flex-1 font-bold text-sm truncate
+        ${selected ? 'text-white' : 'text-[#1A1A1A]'}`}>
+        {p.name}
+      </span>
+
+      {/* Condition bars (stamina / fitness / morale) */}
+      <div className="flex flex-col gap-0.5 w-12 shrink-0">
+        {conditionBar(p.condition.stamina,      selected ? 'bg-white/70' : 'bg-[#4A7C59]')}
+        {conditionBar(p.condition.matchFitness, selected ? 'bg-white/70' : 'bg-[#C9A84C]')}
+        {conditionBar(p.condition.morale,       selected ? 'bg-white/70' : 'bg-[#E8432D]')}
+      </div>
+
+      {/* Rating efetivo */}
+      <span className={`text-lg tabular-nums w-8 text-right shrink-0
+        ${selected ? 'text-white font-black' : ratingColor(eff)}`}>
+        {eff}
+      </span>
+    </div>
+  );
+};
