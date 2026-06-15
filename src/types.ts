@@ -19,5 +19,6 @@ export interface Player {
   clubId: string;
   salary: number;
   marketValue: number;
+  morale: number;
   attributes: PlayerAttributes;
 }
