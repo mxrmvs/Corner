@@ -15,7 +15,7 @@ interface Props {
 }
 
 export const LineupScreen = ({ players, onConfirm, onBack }: Props) => {
-  const available = players.filter(p => p.clubId !== '' && p.status !== 'INJURED');
+  const available = players.filter(p => p.clubId !== '');
   const [selected, setSelected] = useState<string[]>(() =>
     available.slice(0, 11).map(p => p.id)
   );
