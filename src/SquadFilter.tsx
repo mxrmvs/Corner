@@ -15,24 +15,18 @@ interface Props {
 }
 
 export const SquadFilter = ({ active, onChange, counts }: Props) => (
-  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
+  <div className="flex gap-2 flex-wrap mb-6">
     {FILTERS.map(({ label, value }) => {
       const isActive = active === value;
       return (
-        <button key={value} onClick={() => onChange(value)} style={{
-          padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          fontWeight: 700, fontSize: 13,
-          background: isActive ? '#2DFFA8' : 'rgba(255,255,255,0.06)',
-          color: isActive ? '#0B0F14' : '#8B97A3',
-          transition: 'all 0.15s',
-        }}>
+        <button key={value} onClick={() => onChange(value)}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-150 cursor-pointer
+            ${isActive
+              ? 'bg-[#2DFFA8] text-[#0B0F14]'
+              : 'bg-white/[0.06] text-[#8B97A3] hover:bg-white/10 hover:text-[#E6EDF3]'
+            }`}>
           {label}
-          <span style={{
-            marginLeft: 6, fontSize: 11,
-            opacity: 0.7,
-          }}>
-            {counts[value]}
-          </span>
+          <span className="ml-1.5 opacity-60">{counts[value]}</span>
         </button>
       );
     })}

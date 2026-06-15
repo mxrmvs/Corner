@@ -50,51 +50,47 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
   };
 
   return (
-    <div style={{
-      background: 'rgba(19,26,34,0.95)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 16, padding: 24, maxWidth: 600,
-    }}>
+    <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-6 max-w-xl mx-auto">
       {/* Placar */}
-      <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <div style={{ fontSize: 13, color: '#8B97A3', marginBottom: 8 }}>⚽ Partida</div>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#E6EDF3' }}>{homeTeamName}</span>
-          <span style={{ fontSize: 48, fontWeight: 800, color: '#2DFFA8', minWidth: 100, textAlign: 'center' }}>
-            {homeGoals} x {awayGoals}
+      <div className="text-center mb-6">
+        <div className="text-xs text-[#8B97A3] mb-3 tracking-widest uppercase">⚽ Partida ao Vivo</div>
+        <div className="flex justify-center items-center gap-6">
+          <span className="text-base font-bold text-[#E6EDF3] w-28 text-right">{homeTeamName}</span>
+          <span className="text-5xl font-black text-[#2DFFA8] tabular-nums w-24 text-center">
+            {homeGoals} — {awayGoals}
           </span>
-          <span style={{ fontSize: 16, fontWeight: 700, color: '#E6EDF3' }}>{awayTeamName}</span>
+          <span className="text-base font-bold text-[#E6EDF3] w-28 text-left">{awayTeamName}</span>
         </div>
+        {running && (
+          <div className="mt-3 inline-flex items-center gap-2 text-xs text-[#FB5C6B] font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FB5C6B] animate-pulse inline-block" />
+            AO VIVO
+          </div>
+        )}
       </div>
 
-      {/* Botão */}
+      {/* Botão iniciar */}
       {!running && !done && (
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <button onClick={startMatch} style={{
-            background: '#2DFFA8', color: '#0B0F14',
-            border: 'none', borderRadius: 999,
-            padding: '10px 32px', fontSize: 15, fontWeight: 800, cursor: 'pointer',
-          }}>
+        <div className="text-center mb-6">
+          <button onClick={startMatch}
+            className="bg-[#2DFFA8] text-[#0B0F14] font-black px-8 py-2.5 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
             ▶ Iniciar Partida
           </button>
         </div>
       )}
 
-      {running && (
-        <div style={{ textAlign: 'center', marginBottom: 16, color: '#2DFFA8', fontSize: 13 }}>
-          🔴 Ao vivo...
-        </div>
-      )}
-
       {/* Feed de eventos */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+      <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
         {events.map((ev, i) => (
-          <div key={i} style={{
-            padding: '8px 12px', borderRadius: 8,
-            background: ev.text.startsWith('⚽') ? 'rgba(45,255,168,0.08)' : 'rgba(255,255,255,0.03)',
-            color: ev.text.startsWith('⚽') ? '#2DFFA8' : '#8B97A3',
-            fontSize: 13,
-          }}>
+          <div key={i} className={`px-3 py-2 rounded-lg text-xs transition-all
+            ${ev.text.startsWith('⚽')
+              ? 'bg-[rgba(45,255,168,0.08)] text-[#2DFFA8] font-semibold'
+              : ev.text.startsWith('🧱')
+              ? 'bg-[rgba(251,191,36,0.06)] text-[#FBBF24]'
+              : ev.text.startsWith('⚠️')
+              ? 'bg-[rgba(56,189,248,0.06)] text-[#38BDF8]'
+              : 'bg-white/[0.02] text-[#8B97A3]'
+            }`}>
             {ev.text}
           </div>
         ))}
@@ -102,20 +98,14 @@ export const MatchScreen = ({ homePlayers, awayPlayers, homeTeamName, awayTeamNa
 
       {/* Botões pós-jogo */}
       {done && (
-        <div style={{ display: 'flex', gap: 12, marginTop: 20, justifyContent: 'center' }}>
-          <button onClick={startMatch} style={{
-            background: 'rgba(255,255,255,0.06)', color: '#E6EDF3',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999,
-            padding: '8px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>
+        <div className="flex gap-3 mt-5 justify-center">
+          <button onClick={startMatch}
+            className="bg-white/[0.06] text-[#E6EDF3] border border-white/10 rounded-full px-6 py-2 text-xs font-bold hover:bg-white/10 transition-all cursor-pointer">
             🔄 Repetir
           </button>
-          <button onClick={onBack} style={{
-            background: 'rgba(255,255,255,0.06)', color: '#E6EDF3',
-            border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999,
-            padding: '8px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>
-            ← Voltar
+          <button onClick={onBack}
+            className="bg-white/[0.06] text-[#E6EDF3] border border-white/10 rounded-full px-6 py-2 text-xs font-bold hover:bg-white/10 transition-all cursor-pointer">
+            ← Elenco
           </button>
         </div>
       )}
