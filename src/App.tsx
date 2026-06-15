@@ -37,6 +37,18 @@ const NAV: { label: string; value: Screen }[] = [
   { label: '🏋️ Treino',   value: 'training' },
 ];
 
+function getOpponentId(calendar: Calendar | null, userClubId: string): string {
+  if (!calendar) return '';
+  const round = calendar.rounds[calendar.currentRound - 1]
+    ?? calendar.rounds[calendar.currentRound - 2];
+  if (!round) return '';
+  const match = round.find(
+    m => m.homeClubId === userClubId || m.awayClubId === userClubId
+  );
+  if (!match) return '';
+  return match.homeClubId === userClubId ? match.awayClubId : match.homeClubId;
+}
+
 function App() {
   const [appState, setAppState]   = useState<AppState>('loading');
   const [hasSave, setHasSave]     = useState(false);
@@ -156,7 +168,6 @@ function App() {
     if (injuries.length > 0) setReport({ news: injuries });
   };
 
-  // tela de carregamento
   if (appState === 'loading') {
     return (
       <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
@@ -168,7 +179,6 @@ function App() {
     );
   }
 
-  // tela de seleção
   if (appState === 'select') {
     return (
       <ClubSelect
@@ -182,6 +192,10 @@ function App() {
   }
 
   const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
+  const oppId = getOpponentId(calendar, userClub.id);
+  const oppPlayers = players.filter(p => p.clubId === oppId);
+  const oppClub = CLUBS.find(c => c.id === oppId);
+
   const counts = {
     ALL: mySquadPlayers.length,
     GK:  mySquadPlayers.filter(p => p.position === 'GK').length,
@@ -223,7 +237,7 @@ function App() {
         {screen === 'squad' && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold">Elenco</h2>
+              <h2 className="text-lg font-bold">Elenco — {userClub.name}</h2>
               <span className="text-xs text-[#8B97A3]">{visible.length} jogadores</span>
             </div>
             <SquadFilter active={filter} onChange={setFilter} counts={counts} />
@@ -232,15 +246,29 @@ function App() {
             </div>
           </div>
         )}
+
         {screen === 'match' && (
-          <MatchScreen
-            homePlayers={mySquadPlayers}
-            awayPlayers={players.filter(p => p.clubId === 'c2')}
-            homeTeamName={userClub.name}
-            awayTeamName="Rival FC"
-            onBack={() => setScreen('squad')}
-          />
+          <div>
+            {oppId && oppPlayers.length > 0 ? (
+              <MatchScreen
+                homePlayers={mySquadPlayers}
+                awayPlayers={oppPlayers}
+                homeTeamName={userClub.name}
+                awayTeamName={oppClub?.name ?? 'Adversário'}
+                onBack={() => setScreen('squad')}
+              />
+            ) : (
+              <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-8 text-center max-w-md mx-auto">
+                <div className="text-4xl mb-4">📅</div>
+                <h2 className="text-lg font-bold mb-2">Nenhuma partida agendada</h2>
+                <p className="text-[#8B97A3] text-sm">
+                  Simule a rodada atual na aba <strong className="text-[#E6EDF3]">Tabela</strong> para agendar sua próxima partida.
+                </p>
+              </div>
+            )}
+          </div>
         )}
+
         {screen === 'table' && calendar && (
           <LeagueTable
             standings={standings}
@@ -251,7 +279,9 @@ function App() {
             onNewSeason={handleNewSeason}
           />
         )}
+
         {screen === 'club' && <ClubScreen club={userClub} onUpdate={setUserClub} />}
+
         {screen === 'market' && (
           <TransferMarket
             allPlayers={players}
@@ -260,6 +290,7 @@ function App() {
             onSell={handleSell}
           />
         )}
+
         {screen === 'training' && (
           <TrainingScreen players={players} onApply={handleTraining} />
         )}
