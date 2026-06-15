@@ -16,5 +16,8 @@ export interface Player {
   position: Position;
   foot: 'Destro' | 'Canhoto';
   currentRating: number;
+  clubId: string;
+  salary: number;
+  marketValue: number;
   attributes: PlayerAttributes;
 }

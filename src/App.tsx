@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { PositionFilter } from './types';
-import { PLAYERS } from './players';
+import type { Player } from './types';
+import { PLAYERS as INITIAL_PLAYERS } from './players';
 import { CLUBS } from './clubs';
 import type { Club } from './clubs';
 import { PlayerCard } from './PlayerCard';
@@ -8,6 +9,7 @@ import { SquadFilter } from './SquadFilter';
 import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
 import { ClubScreen } from './ClubScreen';
+import { TransferMarket } from './TransferMarket';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
@@ -15,30 +17,24 @@ import { saveGame, loadGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
-const counts = {
-  ALL: PLAYERS.length,
-  GK:  PLAYERS.filter(p => p.position === 'GK').length,
-  DEF: PLAYERS.filter(p => p.position === 'DEF').length,
-  MID: PLAYERS.filter(p => p.position === 'MID').length,
-  ATT: PLAYERS.filter(p => p.position === 'ATT').length,
-};
-
-type Screen = 'squad' | 'match' | 'table' | 'club';
+type Screen = 'squad' | 'match' | 'table' | 'club' | 'market';
 
 const NAV: { label: string; value: Screen }[] = [
-  { label: '👥 Elenco',  value: 'squad' },
-  { label: '⚽ Partida', value: 'match'  },
-  { label: '📊 Tabela',  value: 'table'  },
-  { label: '🏟️ Clube',   value: 'club'   },
+  { label: '👥 Elenco',    value: 'squad'  },
+  { label: '⚽ Partida',   value: 'match'  },
+  { label: '📊 Tabela',    value: 'table'  },
+  { label: '🏟️ Clube',     value: 'club'   },
+  { label: '🛒 Mercado',   value: 'market' },
 ];
 
 function App() {
-  const [filter, setFilter]       = useState<PositionFilter>('ALL');
   const [screen, setScreen]       = useState<Screen>('squad');
+  const [filter, setFilter]       = useState<PositionFilter>('ALL');
   const [calendar, setCalendar]   = useState<Calendar | null>(null);
   const [standings, setStandings] = useState<ClubStanding[]>([]);
   const [season, setSeason]       = useState(1);
   const [saved, setSaved]         = useState(false);
+  const [players, setPlayers]     = useState<Player[]>(INITIAL_PLAYERS);
   const [userClub, setUserClub]   = useState<Club>(CLUBS[0]);
 
   useEffect(() => {
@@ -47,9 +43,10 @@ function App() {
         setCalendar(data.calendar);
         setStandings(data.standings);
         setSeason(data.season);
+        if (data.players) setPlayers(data.players);
+        if (data.userClub) setUserClub(data.userClub);
       } else {
-        const cal = generateCalendar();
-        setCalendar(cal);
+        setCalendar(generateCalendar());
         setStandings(computeStandings([]));
       }
     });
@@ -57,11 +54,11 @@ function App() {
 
   useEffect(() => {
     if (!calendar) return;
-    saveGame({ calendar, standings, season }).then(() => {
+    saveGame({ calendar, standings, season, players, userClub }).then(() => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     });
-  }, [calendar, standings, season]);
+  }, [calendar, standings, season, players, userClub]);
 
   const simulateRound = () => {
     if (!calendar) return;
@@ -76,15 +73,34 @@ function App() {
   };
 
   const newSeason = () => {
-    const cal = generateCalendar();
-    setCalendar(cal);
+    setCalendar(generateCalendar());
     setStandings(computeStandings([]));
     setSeason(s => s + 1);
   };
 
+  const handleBuy = (p: Player) => {
+    setPlayers(prev => prev.map(pl => pl.id === p.id ? { ...pl, clubId: userClub.id } : pl));
+    setUserClub(prev => ({ ...prev, balance: prev.balance - p.marketValue }));
+  };
+
+  const handleSell = (p: Player) => {
+    setPlayers(prev => prev.map(pl => pl.id === p.id ? { ...pl, clubId: '' } : pl));
+    setUserClub(prev => ({ ...prev, balance: prev.balance + p.marketValue }));
+  };
+
+  const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
+
+  const counts = {
+    ALL: mySquadPlayers.length,
+    GK:  mySquadPlayers.filter(p => p.position === 'GK').length,
+    DEF: mySquadPlayers.filter(p => p.position === 'DEF').length,
+    MID: mySquadPlayers.filter(p => p.position === 'MID').length,
+    ATT: mySquadPlayers.filter(p => p.position === 'ATT').length,
+  };
+
   const visible = filter === 'ALL'
-    ? PLAYERS
-    : PLAYERS.filter(p => p.position === filter);
+    ? mySquadPlayers
+    : mySquadPlayers.filter(p => p.position === filter);
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
@@ -96,7 +112,7 @@ function App() {
             {saved && <span className="ml-2 text-[#2DFFA8]">✓ salvo</span>}
           </p>
         </div>
-        <nav className="flex gap-2">
+        <nav className="flex gap-2 flex-wrap justify-end">
           {NAV.map(({ label, value }) => (
             <button key={value} onClick={() => setScreen(value)}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer
@@ -128,8 +144,8 @@ function App() {
 
         {screen === 'match' && (
           <MatchScreen
-            homePlayers={PLAYERS}
-            awayPlayers={[...PLAYERS].sort(() => Math.random() - 0.5).slice(0, 11)}
+            homePlayers={mySquadPlayers}
+            awayPlayers={players.filter(p => p.clubId === 'c2')}
             homeTeamName={userClub.name}
             awayTeamName="Rival FC"
             onBack={() => setScreen('squad')}
@@ -139,7 +155,7 @@ function App() {
         {screen === 'table' && calendar && (
           <LeagueTable
             standings={standings}
-            userClubId="c1"
+            userClubId={userClub.id}
             currentRound={calendar.currentRound}
             totalRounds={calendar.rounds.length}
             onSimulateRound={simulateRound}
@@ -150,7 +166,16 @@ function App() {
         {screen === 'club' && (
           <ClubScreen
             club={userClub}
-            onUpdate={(updated) => setUserClub(updated)}
+            onUpdate={setUserClub}
+          />
+        )}
+
+        {screen === 'market' && (
+          <TransferMarket
+            allPlayers={players}
+            userClub={userClub}
+            onBuy={handleBuy}
+            onSell={handleSell}
           />
         )}
       </main>
