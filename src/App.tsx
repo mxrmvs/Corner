@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import type { PositionFilter } from './types';
 import { PLAYERS } from './players';
+import { CLUBS } from './clubs';
+import type { Club } from './clubs';
 import { PlayerCard } from './PlayerCard';
 import { SquadFilter } from './SquadFilter';
 import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
+import { ClubScreen } from './ClubScreen';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
@@ -20,12 +23,13 @@ const counts = {
   ATT: PLAYERS.filter(p => p.position === 'ATT').length,
 };
 
-type Screen = 'squad' | 'match' | 'table';
+type Screen = 'squad' | 'match' | 'table' | 'club';
 
 const NAV: { label: string; value: Screen }[] = [
   { label: '👥 Elenco',  value: 'squad' },
   { label: '⚽ Partida', value: 'match'  },
   { label: '📊 Tabela',  value: 'table'  },
+  { label: '🏟️ Clube',   value: 'club'   },
 ];
 
 function App() {
@@ -35,8 +39,8 @@ function App() {
   const [standings, setStandings] = useState<ClubStanding[]>([]);
   const [season, setSeason]       = useState(1);
   const [saved, setSaved]         = useState(false);
+  const [userClub, setUserClub]   = useState<Club>(CLUBS[0]);
 
-  // carrega save ao abrir
   useEffect(() => {
     loadGame().then(data => {
       if (data) {
@@ -51,7 +55,6 @@ function App() {
     });
   }, []);
 
-  // salva automaticamente sempre que o calendário muda
   useEffect(() => {
     if (!calendar) return;
     saveGame({ calendar, standings, season }).then(() => {
@@ -64,11 +67,9 @@ function App() {
     if (!calendar) return;
     const { rounds, currentRound } = calendar;
     if (currentRound > rounds.length) return;
-
     const updatedRound = rounds[currentRound - 1].map(simulateMatch);
     const updatedRounds = [...rounds];
     updatedRounds[currentRound - 1] = updatedRound;
-
     const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
     setCalendar(newCal);
     setStandings(computeStandings(updatedRounds.flat()));
@@ -91,7 +92,7 @@ function App() {
         <div>
           <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
           <p className="text-xs text-[#8B97A3] mt-0.5">
-            Temporada {season}
+            Temporada {season} · {userClub.name}
             {saved && <span className="ml-2 text-[#2DFFA8]">✓ salvo</span>}
           </p>
         </div>
@@ -129,7 +130,7 @@ function App() {
           <MatchScreen
             homePlayers={PLAYERS}
             awayPlayers={[...PLAYERS].sort(() => Math.random() - 0.5).slice(0, 11)}
-            homeTeamName="Corner FC"
+            homeTeamName={userClub.name}
             awayTeamName="Rival FC"
             onBack={() => setScreen('squad')}
           />
@@ -143,6 +144,13 @@ function App() {
             totalRounds={calendar.rounds.length}
             onSimulateRound={simulateRound}
             onNewSeason={newSeason}
+          />
+        )}
+
+        {screen === 'club' && (
+          <ClubScreen
+            club={userClub}
+            onUpdate={(updated) => setUserClub(updated)}
           />
         )}
       </main>
