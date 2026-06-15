@@ -10,9 +10,11 @@ import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
 import { ClubScreen } from './ClubScreen';
 import { TransferMarket } from './TransferMarket';
+import { SeasonReport } from './SeasonReport';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
+import { evolveSquad } from './evolution';
 import { saveGame, loadGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
@@ -20,22 +22,23 @@ import type { ClubStanding } from './leagueTypes';
 type Screen = 'squad' | 'match' | 'table' | 'club' | 'market';
 
 const NAV: { label: string; value: Screen }[] = [
-  { label: '👥 Elenco',    value: 'squad'  },
-  { label: '⚽ Partida',   value: 'match'  },
-  { label: '📊 Tabela',    value: 'table'  },
-  { label: '🏟️ Clube',     value: 'club'   },
-  { label: '🛒 Mercado',   value: 'market' },
+  { label: '👥 Elenco',  value: 'squad'  },
+  { label: '⚽ Partida', value: 'match'  },
+  { label: '📊 Tabela',  value: 'table'  },
+  { label: '🏟️ Clube',   value: 'club'   },
+  { label: '🛒 Mercado', value: 'market' },
 ];
 
 function App() {
-  const [screen, setScreen]       = useState<Screen>('squad');
-  const [filter, setFilter]       = useState<PositionFilter>('ALL');
-  const [calendar, setCalendar]   = useState<Calendar | null>(null);
-  const [standings, setStandings] = useState<ClubStanding[]>([]);
-  const [season, setSeason]       = useState(1);
-  const [saved, setSaved]         = useState(false);
-  const [players, setPlayers]     = useState<Player[]>(INITIAL_PLAYERS);
-  const [userClub, setUserClub]   = useState<Club>(CLUBS[0]);
+  const [screen, setScreen]         = useState<Screen>('squad');
+  const [filter, setFilter]         = useState<PositionFilter>('ALL');
+  const [calendar, setCalendar]     = useState<Calendar | null>(null);
+  const [standings, setStandings]   = useState<ClubStanding[]>([]);
+  const [season, setSeason]         = useState(1);
+  const [saved, setSaved]           = useState(false);
+  const [players, setPlayers]       = useState<Player[]>(INITIAL_PLAYERS);
+  const [userClub, setUserClub]     = useState<Club>(CLUBS[0]);
+  const [report, setReport]         = useState<{ news: string[] } | null>(null);
 
   useEffect(() => {
     loadGame().then(data => {
@@ -43,7 +46,7 @@ function App() {
         setCalendar(data.calendar);
         setStandings(data.standings);
         setSeason(data.season);
-        if (data.players) setPlayers(data.players);
+        if (data.players)  setPlayers(data.players);
         if (data.userClub) setUserClub(data.userClub);
       } else {
         setCalendar(generateCalendar());
@@ -72,10 +75,18 @@ function App() {
     setStandings(computeStandings(updatedRounds.flat()));
   };
 
-  const newSeason = () => {
+  const handleNewSeason = () => {
+    // evolui todos os jogadores e mostra relatório
+    const { players: evolved, news } = evolveSquad(players);
+    setPlayers(evolved);
+    setReport({ news });
+  };
+
+  const confirmNewSeason = () => {
     setCalendar(generateCalendar());
     setStandings(computeStandings([]));
     setSeason(s => s + 1);
+    setReport(null);
   };
 
   const handleBuy = (p: Player) => {
@@ -104,6 +115,16 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
+
+      {/* Modal de relatório de temporada */}
+      {report && (
+        <SeasonReport
+          news={report.news}
+          season={season}
+          onClose={confirmNewSeason}
+        />
+      )}
+
       <header className="border-b border-white/[0.06] px-6 py-4 flex justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
         <div>
           <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
@@ -159,7 +180,7 @@ function App() {
             currentRound={calendar.currentRound}
             totalRounds={calendar.rounds.length}
             onSimulateRound={simulateRound}
-            onNewSeason={newSeason}
+            onNewSeason={handleNewSeason}
           />
         )}
 
