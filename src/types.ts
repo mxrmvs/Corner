@@ -1,5 +1,7 @@
 export type Position = 'GK' | 'DEF' | 'MID' | 'ATT';
 
+export type PositionFilter = 'ALL' | Position;
+
 export interface PlayerAttributes {
   attack: number;
   defense: number;
