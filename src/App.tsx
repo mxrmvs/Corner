@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { PositionFilter } from './types';
 import { PLAYERS } from './players';
 import { PlayerCard } from './PlayerCard';
 import { SquadFilter } from './SquadFilter';
 import { MatchScreen } from './MatchScreen';
 import { LeagueTable } from './LeagueTable';
+import { generateCalendar } from './calendar';
+import { simulateMatch } from './simulate';
+import { computeStandings } from './standings';
+import type { Calendar } from './calendar';
+import type { ClubStanding } from './leagueTypes';
 
 const counts = {
   ALL: PLAYERS.length,
@@ -18,13 +23,35 @@ type Screen = 'squad' | 'match' | 'table';
 
 const NAV: { label: string; value: Screen }[] = [
   { label: '👥 Elenco',  value: 'squad' },
-  { label: '⚽ Partida', value: 'match' },
-  { label: '📊 Tabela',  value: 'table' },
+  { label: '⚽ Partida', value: 'match'  },
+  { label: '📊 Tabela',  value: 'table'  },
 ];
 
 function App() {
-  const [filter, setFilter] = useState<PositionFilter>('ALL');
-  const [screen, setScreen] = useState<Screen>('squad');
+  const [filter, setFilter]       = useState<PositionFilter>('ALL');
+  const [screen, setScreen]       = useState<Screen>('squad');
+  const [calendar, setCalendar]   = useState<Calendar | null>(null);
+  const [standings, setStandings] = useState<ClubStanding[]>([]);
+
+  useEffect(() => {
+    const cal = generateCalendar();
+    setCalendar(cal);
+    setStandings(computeStandings([]));
+  }, []);
+
+  const simulateRound = () => {
+    if (!calendar) return;
+    const { rounds, currentRound } = calendar;
+    if (currentRound > rounds.length) return;
+
+    const updatedRound = rounds[currentRound - 1].map(simulateMatch);
+    const updatedRounds = [...rounds];
+    updatedRounds[currentRound - 1] = updatedRound;
+
+    const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
+    setCalendar(newCal);
+    setStandings(computeStandings(updatedRounds.flat()));
+  };
 
   const visible = filter === 'ALL'
     ? PLAYERS
@@ -32,13 +59,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
-      {/* Header */}
       <header className="border-b border-white/[0.06] px-6 py-4 flex justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
         <div>
           <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
           <p className="text-xs text-[#8B97A3] mt-0.5">Simulador de Carreira de Técnico</p>
         </div>
-        {/* Nav */}
         <nav className="flex gap-2">
           {NAV.map(({ label, value }) => (
             <button key={value} onClick={() => setScreen(value)}
@@ -79,8 +104,14 @@ function App() {
           />
         )}
 
-        {screen === 'table' && (
-          <LeagueTable userClubId="c1" />
+        {screen === 'table' && calendar && (
+          <LeagueTable
+            standings={standings}
+            userClubId="c1"
+            currentRound={calendar.currentRound}
+            totalRounds={calendar.rounds.length}
+            onSimulateRound={simulateRound}
+          />
         )}
       </main>
     </div>
