@@ -2,15 +2,18 @@ import type { Match } from './calendar';
 import { CLUBS } from './clubs';
 
 function teamStrength(clubId: string): number {
-  // força base por posição no array (placeholder até ter jogadores por clube)
   const idx = CLUBS.findIndex(c => c.id === clubId);
   return 70 + (CLUBS.length - idx) * 1.5;
 }
 
 function poisson(lambda: number): number {
   const L = Math.exp(-lambda);
-  let k = 0, p = 1;
-  do { k++; p *= Math.random(); } while (p > L);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= Math.random();
+  } while (p > L);
   return k - 1;
 }
 
@@ -23,4 +26,7 @@ export function simulateMatch(match: Match): Match {
   return {
     ...match,
     homeGoals: poisson(homeXg),
-    awayGoals:
+    awayGoals: poisson(awayXg),
+    played: true,
+  };
+}
