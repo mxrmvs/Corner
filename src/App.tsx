@@ -35,15 +35,15 @@ import type { ClubStanding } from './leagueTypes';
 type Screen = 'squad' | 'match' | 'lineup' | 'table' | 'club' | 'market' | 'training' | 'history';
 type AppState = 'loading' | 'select' | 'playing';
 
-const NAV: { label: string; value: Screen }[] = [
-  { label: '👥 Elenco',    value: 'squad'    },
-  { label: '📋 Escalação', value: 'lineup'   },
-  { label: '⚽ Partida',   value: 'match'    },
-  { label: '📊 Tabela',    value: 'table'    },
-  { label: '📜 Histórico', value: 'history'  },
-  { label: '🏟️ Clube',     value: 'club'     },
-  { label: '🛒 Mercado',   value: 'market'   },
-  { label: '🏋️ Treino',    value: 'training' },
+const NAV: { label: string; icon: string; value: Screen }[] = [
+  { label: 'Elenco',    icon: '👥', value: 'squad'    },
+  { label: 'Escalação', icon: '📋', value: 'lineup'   },
+  { label: 'Partida',   icon: '⚽', value: 'match'    },
+  { label: 'Tabela',    icon: '📊', value: 'table'    },
+  { label: 'Histórico', icon: '📜', value: 'history'  },
+  { label: 'Clube',     icon: '🏟️', value: 'club'     },
+  { label: 'Mercado',   icon: '🛒', value: 'market'   },
+  { label: 'Treino',    icon: '🏋️', value: 'training' },
 ];
 
 function getOpponentId(calendar: Calendar | null, userClubId: string): string {
@@ -59,30 +59,26 @@ function getOpponentId(calendar: Calendar | null, userClubId: string): string {
 }
 
 function App() {
-  const [appState, setAppState]           = useState<AppState>('loading');
-  const [hasSave, setHasSave]             = useState(false);
-  const [screen, setScreen]               = useState<Screen>('squad');
-  const [filter, setFilter]               = useState<PositionFilter>('ALL');
-  const [calendar, setCalendar]           = useState<Calendar | null>(null);
-  const [standings, setStandings]         = useState<ClubStanding[]>([]);
-  const [season, setSeason]               = useState(1);
-  const [saved, setSaved]                 = useState(false);
-  const [players, setPlayers]             = useState<Player[]>(INITIAL_PLAYERS);
-  const [userClub, setUserClub]           = useState<Club>(CLUBS[0]);
-  const [report, setReport]               = useState<{ news: string[] } | null>(null);
-  const [dilemma, setDilemma]             = useState<Dilemma | null>(null);
-  const [showResults, setShowResults]     = useState(false);
-  const [lineup, setLineup]               = useState<Player[]>([]);
-  const [achievements, setAchievements]   = useState<Achievement[]>([]);
+  const [appState, setAppState]         = useState<AppState>('loading');
+  const [hasSave, setHasSave]           = useState(false);
+  const [screen, setScreen]             = useState<Screen>('squad');
+  const [filter, setFilter]             = useState<PositionFilter>('ALL');
+  const [calendar, setCalendar]         = useState<Calendar | null>(null);
+  const [standings, setStandings]       = useState<ClubStanding[]>([]);
+  const [season, setSeason]             = useState(1);
+  const [saved, setSaved]               = useState(false);
+  const [players, setPlayers]           = useState<Player[]>(INITIAL_PLAYERS);
+  const [userClub, setUserClub]         = useState<Club>(CLUBS[0]);
+  const [report, setReport]             = useState<{ news: string[] } | null>(null);
+  const [dilemma, setDilemma]           = useState<Dilemma | null>(null);
+  const [showResults, setShowResults]   = useState(false);
+  const [lineup, setLineup]             = useState<Player[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
 
   useEffect(() => {
     loadGame().then(data => {
-      if (data) {
-        setHasSave(true);
-        setAppState('select');
-      } else {
-        setAppState('select');
-      }
+      if (data) { setHasSave(true); setAppState('select'); }
+      else setAppState('select');
     });
   }, []);
 
@@ -127,23 +123,18 @@ function App() {
     if (!calendar) return;
     const { rounds, currentRound } = calendar;
     if (currentRound > rounds.length) return;
-
     const prevStanding = standings.find(s => s.clubId === userClub.id);
-
     const updatedRound = rounds[currentRound - 1].map(simulateMatch);
     const updatedRounds = [...rounds];
     updatedRounds[currentRound - 1] = updatedRound;
     const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
     const newStandings = computeStandings(updatedRounds.flat());
-
     setCalendar(newCal);
     setStandings(newStandings);
-
     const currStanding = newStandings.find(s => s.clubId === userClub.id);
     const allMatches = updatedRounds.flat();
-    const newAchievements = checkAchievements(prevStanding, currStanding, allMatches, userClub.id);
-    if (newAchievements.length) setAchievements(newAchievements);
-
+    const newAch = checkAchievements(prevStanding, currStanding, allMatches, userClub.id);
+    if (newAch.length) setAchievements(newAch);
     const d = rollDilemma(players);
     if (d) setDilemma(d);
     setShowResults(true);
@@ -255,13 +246,11 @@ function App() {
         />
       )}
       {achievements.length > 0 && (
-        <AchievementToast
-          achievements={achievements}
-          onDone={() => setAchievements([])}
-        />
+        <AchievementToast achievements={achievements} onDone={() => setAchievements([])} />
       )}
 
-      <header className="border-b border-white/[0.06] px-6 py-4 flex justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
+      {/* HEADER — desktop */}
+      <header className="hidden md:flex border-b border-white/[0.06] px-6 py-4 justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
         <div>
           <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
           <p className="text-xs text-[#8B97A3] mt-0.5">
@@ -270,14 +259,14 @@ function App() {
           </p>
         </div>
         <nav className="flex gap-2 flex-wrap justify-end">
-          {NAV.map(({ label, value }) => (
+          {NAV.map(({ label, icon, value }) => (
             <button key={value} onClick={() => setScreen(value)}
               className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer
                 ${screen === value
                   ? 'bg-[#2DFFA8] text-[#0B0F14]'
                   : 'bg-white/[0.06] text-[#8B97A3] hover:bg-white/10 hover:text-[#E6EDF3]'
                 }`}>
-              {label}
+              {icon} {label}
             </button>
           ))}
           <button onClick={() => { deleteGame(); window.location.reload(); }}
@@ -287,7 +276,23 @@ function App() {
         </nav>
       </header>
 
-      <main className="px-6 py-8 max-w-7xl mx-auto">
+      {/* HEADER — mobile */}
+      <header className="md:hidden flex border-b border-white/[0.06] px-4 py-3 justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
+        <div>
+          <h1 className="text-lg font-black tracking-[0.15em]">CORNER</h1>
+          <p className="text-[10px] text-[#8B97A3]">
+            T{season} · {userClub.name}
+            {saved && <span className="ml-1 text-[#2DFFA8]">✓</span>}
+          </p>
+        </div>
+        <button onClick={() => { deleteGame(); window.location.reload(); }}
+          className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/[0.06] text-[#FB5C6B] cursor-pointer">
+          ⏹
+        </button>
+      </header>
+
+      {/* CONTEÚDO */}
+      <main className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto pb-24 md:pb-8">
 
         {screen === 'squad' && (
           <div className="flex flex-col gap-6">
@@ -301,12 +306,12 @@ function App() {
               />
             )}
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold">Elenco — {userClub.name}</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base md:text-lg font-bold">Elenco — {userClub.name}</h2>
                 <span className="text-xs text-[#8B97A3]">{visible.length} jogadores</span>
               </div>
               <SquadFilter active={filter} onChange={setFilter} counts={counts} />
-              <div className="flex gap-4 flex-wrap">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {visible.map(p => <PlayerCard key={p.id} player={p} />)}
               </div>
             </div>
@@ -346,15 +351,17 @@ function App() {
         )}
 
         {screen === 'table' && calendar && (
-          <LeagueTable
-            standings={standings}
-            userClubId={userClub.id}
-            currentRound={calendar.currentRound}
-            totalRounds={calendar.rounds.length}
-            onSimulateRound={simulateRound}
-            onNewSeason={handleNewSeason}
-            onShowResults={() => setShowResults(true)}
-          />
+          <div className="overflow-x-auto">
+            <LeagueTable
+              standings={standings}
+              userClubId={userClub.id}
+              currentRound={calendar.currentRound}
+              totalRounds={calendar.rounds.length}
+              onSimulateRound={simulateRound}
+              onNewSeason={handleNewSeason}
+              onShowResults={() => setShowResults(true)}
+            />
+          </div>
         )}
 
         {screen === 'history' && (
@@ -383,6 +390,31 @@ function App() {
         )}
 
       </main>
+
+      {/* TAB BAR — mobile */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#0B0F14]/95 backdrop-blur-md border-t border-white/[0.06] z-10">
+        <div className="grid grid-cols-4 gap-0">
+          {NAV.slice(0, 4).map(({ icon, label, value }) => (
+            <button key={value} onClick={() => setScreen(value)}
+              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold transition-all cursor-pointer
+                ${screen === value ? 'text-[#2DFFA8]' : 'text-[#8B97A3]'}`}>
+              <span className="text-lg">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-4 gap-0 border-t border-white/[0.04]">
+          {NAV.slice(4).map(({ icon, label, value }) => (
+            <button key={value} onClick={() => setScreen(value)}
+              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold transition-all cursor-pointer
+                ${screen === value ? 'text-[#2DFFA8]' : 'text-[#8B97A3]'}`}>
+              <span className="text-lg">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
     </div>
   );
 }
