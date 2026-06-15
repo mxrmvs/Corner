@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { PositionFilter, Player } from './types';
+import type { PositionFilter, Player, Division } from './types';
 import { PLAYERS as INITIAL_PLAYERS } from './players';
 import { CLUBS } from './clubs';
 import type { Club } from './clubs';
@@ -59,21 +59,22 @@ function getOpponentId(calendar: Calendar | null, userClubId: string): string {
 }
 
 function App() {
-  const [appState, setAppState]         = useState<AppState>('loading');
-  const [hasSave, setHasSave]           = useState(false);
-  const [screen, setScreen]             = useState<Screen>('squad');
-  const [filter, setFilter]             = useState<PositionFilter>('ALL');
-  const [calendar, setCalendar]         = useState<Calendar | null>(null);
-  const [standings, setStandings]       = useState<ClubStanding[]>([]);
-  const [season, setSeason]             = useState(1);
-  const [saved, setSaved]               = useState(false);
-  const [players, setPlayers]           = useState<Player[]>(INITIAL_PLAYERS);
-  const [userClub, setUserClub]         = useState<Club>(CLUBS[0]);
-  const [report, setReport]             = useState<{ news: string[] } | null>(null);
-  const [dilemma, setDilemma]           = useState<Dilemma | null>(null);
-  const [showResults, setShowResults]   = useState(false);
-  const [lineup, setLineup]             = useState<Player[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [appState, setAppState]           = useState<AppState>('loading');
+  const [hasSave, setHasSave]             = useState(false);
+  const [screen, setScreen]               = useState<Screen>('squad');
+  const [filter, setFilter]               = useState<PositionFilter>('ALL');
+  const [calendar, setCalendar]           = useState<Calendar | null>(null);
+  const [standings, setStandings]         = useState<ClubStanding[]>([]);
+  const [season, setSeason]               = useState(1);
+  const [saved, setSaved]                 = useState(false);
+  const [players, setPlayers]             = useState<Player[]>(INITIAL_PLAYERS);
+  const [userClub, setUserClub]           = useState<Club>(CLUBS[0]);
+  const [report, setReport]               = useState<{ news: string[] } | null>(null);
+  const [dilemma, setDilemma]             = useState<Dilemma | null>(null);
+  const [showResults, setShowResults]     = useState(false);
+  const [lineup, setLineup]               = useState<Player[]>([]);
+  const [achievements, setAchievements]   = useState<Achievement[]>([]);
+  const [selectedDivision, setSelectedDivision] = useState<Division>('A');
 
   useEffect(() => {
     loadGame().then(data => {
@@ -132,8 +133,7 @@ function App() {
     setCalendar(newCal);
     setStandings(newStandings);
     const currStanding = newStandings.find(s => s.clubId === userClub.id);
-    const allMatches = updatedRounds.flat();
-    const newAch = checkAchievements(prevStanding, currStanding, allMatches, userClub.id);
+    const newAch = checkAchievements(prevStanding, currStanding, updatedRounds.flat(), userClub.id);
     if (newAch.length) setAchievements(newAch);
     const d = rollDilemma(players);
     if (d) setDilemma(d);
@@ -143,9 +143,9 @@ function App() {
   const handleDilemmaChoice = (choice: DilemmaChoice) => {
     setPlayers(prev => prev.map(p => {
       if (p.id === dilemma?.subjectId)
-        return { ...p, morale: Math.max(0, Math.min(100, p.morale + choice.moraleEffect)) };
+        return { ...p, condition: { ...p.condition, morale: Math.max(0, Math.min(100, p.condition.morale + choice.moraleEffect)) } };
       if (choice.squadEffect !== 0)
-        return { ...p, morale: Math.max(0, Math.min(100, p.morale + choice.squadEffect)) };
+        return { ...p, condition: { ...p.condition, morale: Math.max(0, Math.min(100, p.condition.morale + choice.squadEffect)) } };
       return p;
     }));
     if (choice.balanceEffect !== 0)
@@ -189,10 +189,10 @@ function App() {
 
   if (appState === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F2EDE4] flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-4xl font-black tracking-[0.15em] text-[#E6EDF3]">CORNER</h1>
-          <p className="text-[#2DFFA8] text-xs mt-2 animate-pulse">Carregando...</p>
+          <h1 className="font-display text-5xl font-black text-[#1A1A1A]">CORNER</h1>
+          <p className="text-xs text-[#E8432D] tracking-widest uppercase mt-2">Carregando...</p>
         </div>
       </div>
     );
@@ -203,6 +203,8 @@ function App() {
       <ClubSelect
         clubs={CLUBS}
         hasSave={hasSave}
+        selectedDivision={selectedDivision}
+        onDivisionChange={setSelectedDivision}
         onSelect={handleSelectClub}
         onContinue={handleContinue}
         onNewGame={handleNewGame}
@@ -231,7 +233,7 @@ function App() {
     ? mySquadPlayers : mySquadPlayers.filter(p => p.position === filter);
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-[#E6EDF3] font-sans">
+    <div className="min-h-screen bg-[#F2EDE4] text-[#1A1A1A] font-body">
       {report && <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />}
       {dilemma && !report && (
         <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />
@@ -249,50 +251,45 @@ function App() {
         <AchievementToast achievements={achievements} onDone={() => setAchievements([])} />
       )}
 
-      {/* HEADER — desktop */}
-      <header className="hidden md:flex border-b border-white/[0.06] px-6 py-4 justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
+      {/* HEADER desktop */}
+      <header className="hidden md:flex border-b border-[#1A1A1A] px-6 py-3 justify-between items-end bg-[#F2EDE4] sticky top-0 z-10">
         <div>
-          <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
-          <p className="text-xs text-[#8B97A3] mt-0.5">
-            Temporada {season} · {userClub.name}
-            {saved && <span className="ml-2 text-[#2DFFA8]">✓ salvo</span>}
+          <h1 className="font-display text-2xl font-black text-[#1A1A1A] leading-none">CORNER</h1>
+          <p className="text-2xs text-[#6B6560] tracking-widest uppercase mt-0.5">
+            Temporada {season} · {userClub.name} · Série {userClub.division}
+            {saved && <span className="ml-2 text-[#E8432D]">✓ salvo</span>}
           </p>
         </div>
-        <nav className="flex gap-2 flex-wrap justify-end">
-          {NAV.map(({ label, icon, value }) => (
+        <nav className="flex gap-1">
+          {NAV.map(({ label, value }) => (
             <button key={value} onClick={() => setScreen(value)}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all cursor-pointer
+              className={`px-3 py-1.5 text-xs font-bold tracking-widest uppercase border cursor-pointer transition-colors
                 ${screen === value
-                  ? 'bg-[#2DFFA8] text-[#0B0F14]'
-                  : 'bg-white/[0.06] text-[#8B97A3] hover:bg-white/10 hover:text-[#E6EDF3]'
+                  ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                  : 'bg-transparent text-[#6B6560] border-transparent hover:border-[#D6CFC4] hover:text-[#1A1A1A]'
                 }`}>
-              {icon} {label}
+              {label}
             </button>
           ))}
           <button onClick={() => { deleteGame(); window.location.reload(); }}
-            className="px-4 py-2 rounded-full text-xs font-bold bg-white/[0.06] text-[#FB5C6B] hover:bg-[rgba(251,92,107,0.1)] transition-all cursor-pointer">
-            ⏹ Sair
+            className="px-3 py-1.5 text-xs font-bold tracking-widest uppercase border border-transparent text-[#E8432D] hover:border-[#E8432D] cursor-pointer transition-colors">
+            SAIR
           </button>
         </nav>
       </header>
 
-      {/* HEADER — mobile */}
-      <header className="md:hidden flex border-b border-white/[0.06] px-4 py-3 justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
-        <div>
-          <h1 className="text-lg font-black tracking-[0.15em]">CORNER</h1>
-          <p className="text-[10px] text-[#8B97A3]">
-            T{season} · {userClub.name}
-            {saved && <span className="ml-1 text-[#2DFFA8]">✓</span>}
-          </p>
-        </div>
+      {/* HEADER mobile */}
+      <header className="md:hidden flex border-b border-[#1A1A1A] px-4 py-3 justify-between items-center bg-[#F2EDE4] sticky top-0 z-10">
+        <h1 className="font-display text-xl font-black">CORNER</h1>
+        <p className="text-2xs text-[#6B6560] tracking-widest uppercase">
+          T{season} · {userClub.name}
+          {saved && <span className="ml-1 text-[#E8432D]">✓</span>}
+        </p>
         <button onClick={() => { deleteGame(); window.location.reload(); }}
-          className="px-3 py-1.5 rounded-full text-xs font-bold bg-white/[0.06] text-[#FB5C6B] cursor-pointer">
-          ⏹
-        </button>
+          className="text-xs font-bold text-[#E8432D] cursor-pointer">SAIR</button>
       </header>
 
-      {/* CONTEÚDO */}
-      <main className="px-4 md:px-6 py-6 md:py-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <main className="px-4 md:px-6 py-6 max-w-5xl mx-auto pb-24 md:pb-8">
 
         {screen === 'squad' && (
           <div className="flex flex-col gap-6">
@@ -306,13 +303,17 @@ function App() {
               />
             )}
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base md:text-lg font-bold">Elenco — {userClub.name}</h2>
-                <span className="text-xs text-[#8B97A3]">{visible.length} jogadores</span>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-sm font-bold tracking-widest uppercase text-[#1A1A1A]">
+                  Elenco — {userClub.name}
+                </h2>
+                <span className="text-xs text-[#9E9890]">{visible.length} jogadores</span>
               </div>
               <SquadFilter active={filter} onChange={setFilter} counts={counts} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {visible.map(p => <PlayerCard key={p.id} player={p} />)}
+              <div className="border border-[#D6CFC4] bg-white overflow-hidden">
+                {visible.map((p, i) => (
+                  <PlayerCard key={p.id} player={p} index={i + 1} />
+                ))}
               </div>
             </div>
           </div>
@@ -337,13 +338,11 @@ function App() {
                 onBack={() => setScreen('squad')}
               />
             ) : (
-              <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-8 text-center max-w-md mx-auto">
-                <div className="text-4xl mb-4">📅</div>
-                <h2 className="text-lg font-bold mb-2">Nenhuma partida agendada</h2>
-                <p className="text-[#8B97A3] text-sm">
-                  Simule a rodada na aba{' '}
-                  <strong className="text-[#E6EDF3]">Tabela</strong>{' '}
-                  para agendar sua próxima partida.
+              <div className="border border-[#D6CFC4] bg-white p-8 text-center max-w-md mx-auto">
+                <p className="text-4xl mb-4">📅</p>
+                <h2 className="font-bold mb-2">Nenhuma partida agendada</h2>
+                <p className="text-sm text-[#6B6560]">
+                  Simule a rodada na aba <strong>Tabela</strong> para agendar sua próxima partida.
                 </p>
               </div>
             )}
@@ -365,11 +364,7 @@ function App() {
         )}
 
         {screen === 'history' && (
-          <MatchHistory
-            matches={allPlayedMatches}
-            clubs={CLUBS}
-            userClubId={userClub.id}
-          />
+          <MatchHistory matches={allPlayedMatches} clubs={CLUBS} userClubId={userClub.id} />
         )}
 
         {screen === 'club' && (
@@ -377,12 +372,7 @@ function App() {
         )}
 
         {screen === 'market' && (
-          <TransferMarket
-            allPlayers={players}
-            userClub={userClub}
-            onBuy={handleBuy}
-            onSell={handleSell}
-          />
+          <TransferMarket allPlayers={players} userClub={userClub} onBuy={handleBuy} onSell={handleSell} />
         )}
 
         {screen === 'training' && (
@@ -391,30 +381,29 @@ function App() {
 
       </main>
 
-      {/* TAB BAR — mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#0B0F14]/95 backdrop-blur-md border-t border-white/[0.06] z-10">
+      {/* TAB BAR mobile */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#F2EDE4] border-t border-[#1A1A1A] z-10">
         <div className="grid grid-cols-4 gap-0">
           {NAV.slice(0, 4).map(({ icon, label, value }) => (
             <button key={value} onClick={() => setScreen(value)}
-              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold transition-all cursor-pointer
-                ${screen === value ? 'text-[#2DFFA8]' : 'text-[#8B97A3]'}`}>
+              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold uppercase tracking-widest cursor-pointer
+                ${screen === value ? 'text-[#E8432D]' : 'text-[#6B6560]'}`}>
               <span className="text-lg">{icon}</span>
               {label}
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-4 gap-0 border-t border-white/[0.04]">
+        <div className="grid grid-cols-4 gap-0 border-t border-[#D6CFC4]">
           {NAV.slice(4).map(({ icon, label, value }) => (
             <button key={value} onClick={() => setScreen(value)}
-              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold transition-all cursor-pointer
-                ${screen === value ? 'text-[#2DFFA8]' : 'text-[#8B97A3]'}`}>
+              className={`flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-bold uppercase tracking-widest cursor-pointer
+                ${screen === value ? 'text-[#E8432D]' : 'text-[#6B6560]'}`}>
               <span className="text-lg">{icon}</span>
               {label}
             </button>
           ))}
         </div>
       </nav>
-
     </div>
   );
 }

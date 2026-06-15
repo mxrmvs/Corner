@@ -1,5 +1,5 @@
-import type { Player } from '../types';
-import { effectiveRating } from '../types';
+import type { Player } from './types';
+import { effectiveRating } from './types';
 
 const POS: Record<string, string> = {
   GK: 'GK', DEF: 'CB', MID: 'CM', ATT: 'ST',

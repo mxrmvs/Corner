@@ -1,4 +1,4 @@
-import type { PositionFilter } from '../types';
+import type { PositionFilter } from './types';
 
 const FILTERS: { label: string; value: PositionFilter }[] = [
   { label: 'ALL',  value: 'ALL' },

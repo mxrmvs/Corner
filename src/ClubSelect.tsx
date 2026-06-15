@@ -1,5 +1,5 @@
-import type { Club } from '../clubs';
-import type { Division } from '../types';
+import type { Club } from './clubs';
+import type { Division } from './types';
 
 const fmt = (n: number) =>
   n >= 1_000_000 ? `R$${(n / 1_000_000).toFixed(0)}M` : `R$${(n / 1_000).toFixed(0)}K`;

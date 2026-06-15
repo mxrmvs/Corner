@@ -1,4 +1,4 @@
-import type { TacticalStyle, Formation } from './types';
+import type { Division } from './types';
 
 export interface Club {
   id: string;
@@ -6,9 +6,10 @@ export interface Club {
   reputation: number;
   balance: number;
   stadiumCapacity: number;
+  division: Division;
   tactical: {
-    style: TacticalStyle;
-    formation: Formation;
+    style: 'TIKI_TAKA' | 'COUNTER' | 'DIRECT';
+    formation: '4-3-3' | '4-4-2' | '3-5-2' | '4-2-3-1' | '5-3-2';
   };
 }
 
@@ -19,7 +20,7 @@ export const CLUBS: Club[] = [
   { id: 'mir', name: 'Mirassol',            reputation: 65, balance: 20000000,  stadiumCapacity: 16000, division: 'A', tactical: { style: 'COUNTER',   formation: '4-4-2'   } },
   { id: 'flu', name: 'Fluminense',          reputation: 84, balance: 55000000,  stadiumCapacity: 78838, division: 'A', tactical: { style: 'TIKI_TAKA', formation: '4-3-3'   } },
   { id: 'bot', name: 'Botafogo',            reputation: 83, balance: 70000000,  stadiumCapacity: 44661, division: 'A', tactical: { style: 'DIRECT',    formation: '4-3-3'   } },
-  { id: 'bah', name: 'Bahia',               reputation: 78, balance: 40000000,  stadiumCapacity: 49500, division: 'A', tactical: { style: 'TIKI_TAKA', formation: '4-3-3'   } },
+  { id: 'bah', name: 'Bahia',              reputation: 78, balance: 40000000,  stadiumCapacity: 49500, division: 'A', tactical: { style: 'TIKI_TAKA', formation: '4-3-3'   } },
   { id: 'cor', name: 'Corinthians',         reputation: 88, balance: 50000000,  stadiumCapacity: 49205, division: 'A', tactical: { style: 'DIRECT',    formation: '4-2-3-1' } },
   { id: 'sao', name: 'São Paulo',           reputation: 87, balance: 55000000,  stadiumCapacity: 67428, division: 'A', tactical: { style: 'COUNTER',   formation: '4-4-2'   } },
   { id: 'gre', name: 'Grêmio',             reputation: 85, balance: 50000000,  stadiumCapacity: 55000, division: 'A', tactical: { style: 'TIKI_TAKA', formation: '4-3-3'   } },
