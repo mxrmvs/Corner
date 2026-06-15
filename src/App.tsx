@@ -8,6 +8,7 @@ import { LeagueTable } from './LeagueTable';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
+import { saveGame, loadGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
@@ -32,12 +33,32 @@ function App() {
   const [screen, setScreen]       = useState<Screen>('squad');
   const [calendar, setCalendar]   = useState<Calendar | null>(null);
   const [standings, setStandings] = useState<ClubStanding[]>([]);
+  const [season, setSeason]       = useState(1);
+  const [saved, setSaved]         = useState(false);
 
+  // carrega save ao abrir
   useEffect(() => {
-    const cal = generateCalendar();
-    setCalendar(cal);
-    setStandings(computeStandings([]));
+    loadGame().then(data => {
+      if (data) {
+        setCalendar(data.calendar);
+        setStandings(data.standings);
+        setSeason(data.season);
+      } else {
+        const cal = generateCalendar();
+        setCalendar(cal);
+        setStandings(computeStandings([]));
+      }
+    });
   }, []);
+
+  // salva automaticamente sempre que o calendário muda
+  useEffect(() => {
+    if (!calendar) return;
+    saveGame({ calendar, standings, season }).then(() => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    });
+  }, [calendar, standings, season]);
 
   const simulateRound = () => {
     if (!calendar) return;
@@ -53,6 +74,13 @@ function App() {
     setStandings(computeStandings(updatedRounds.flat()));
   };
 
+  const newSeason = () => {
+    const cal = generateCalendar();
+    setCalendar(cal);
+    setStandings(computeStandings([]));
+    setSeason(s => s + 1);
+  };
+
   const visible = filter === 'ALL'
     ? PLAYERS
     : PLAYERS.filter(p => p.position === filter);
@@ -62,7 +90,10 @@ function App() {
       <header className="border-b border-white/[0.06] px-6 py-4 flex justify-between items-center sticky top-0 bg-[#0B0F14]/90 backdrop-blur-sm z-10">
         <div>
           <h1 className="text-2xl font-black tracking-[0.15em]">CORNER</h1>
-          <p className="text-xs text-[#8B97A3] mt-0.5">Simulador de Carreira de Técnico</p>
+          <p className="text-xs text-[#8B97A3] mt-0.5">
+            Temporada {season}
+            {saved && <span className="ml-2 text-[#2DFFA8]">✓ salvo</span>}
+          </p>
         </div>
         <nav className="flex gap-2">
           {NAV.map(({ label, value }) => (
@@ -111,6 +142,7 @@ function App() {
             currentRound={calendar.currentRound}
             totalRounds={calendar.rounds.length}
             onSimulateRound={simulateRound}
+            onNewSeason={newSeason}
           />
         )}
       </main>

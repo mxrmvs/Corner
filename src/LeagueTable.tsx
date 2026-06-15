@@ -13,9 +13,10 @@ interface Props {
   currentRound: number;
   totalRounds: number;
   onSimulateRound: () => void;
+  onNewSeason: () => void;
 }
 
-export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalRounds, onSimulateRound }: Props) => {
+export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalRounds, onSimulateRound, onNewSeason }: Props) => {
   const userPos = standings.findIndex(s => s.clubId === userClubId);
   const finished = currentRound > totalRounds;
 
@@ -41,7 +42,10 @@ export const LeagueTable = ({ standings, userClubId = 'c1', currentRound, totalR
             </button>
           )}
           {finished && (
-            <span className="text-xs text-[#FBBF24] font-bold">🏆 Fim de temporada</span>
+            <button onClick={onNewSeason}
+              className="bg-[#FBBF24] text-[#0B0F14] font-black px-5 py-2 rounded-full text-xs hover:brightness-110 transition-all cursor-pointer">
+              🏆 Nova Temporada
+            </button>
           )}
         </div>
       </div>
