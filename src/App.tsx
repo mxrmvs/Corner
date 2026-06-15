@@ -17,6 +17,9 @@ import { RoundResults } from './RoundResults';
 import { NextMatch } from './NextMatch';
 import { MatchHistory } from './MatchHistory';
 import { LineupScreen } from './LineupScreen';
+import { AchievementToast } from './AchievementToast';
+import { checkAchievements } from './achievements';
+import type { Achievement } from './achievements';
 import { generateCalendar } from './calendar';
 import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
@@ -56,20 +59,21 @@ function getOpponentId(calendar: Calendar | null, userClubId: string): string {
 }
 
 function App() {
-  const [appState, setAppState]       = useState<AppState>('loading');
-  const [hasSave, setHasSave]         = useState(false);
-  const [screen, setScreen]           = useState<Screen>('squad');
-  const [filter, setFilter]           = useState<PositionFilter>('ALL');
-  const [calendar, setCalendar]       = useState<Calendar | null>(null);
-  const [standings, setStandings]     = useState<ClubStanding[]>([]);
-  const [season, setSeason]           = useState(1);
-  const [saved, setSaved]             = useState(false);
-  const [players, setPlayers]         = useState<Player[]>(INITIAL_PLAYERS);
-  const [userClub, setUserClub]       = useState<Club>(CLUBS[0]);
-  const [report, setReport]           = useState<{ news: string[] } | null>(null);
-  const [dilemma, setDilemma]         = useState<Dilemma | null>(null);
-  const [showResults, setShowResults] = useState(false);
-  const [lineup, setLineup]           = useState<Player[]>([]);
+  const [appState, setAppState]           = useState<AppState>('loading');
+  const [hasSave, setHasSave]             = useState(false);
+  const [screen, setScreen]               = useState<Screen>('squad');
+  const [filter, setFilter]               = useState<PositionFilter>('ALL');
+  const [calendar, setCalendar]           = useState<Calendar | null>(null);
+  const [standings, setStandings]         = useState<ClubStanding[]>([]);
+  const [season, setSeason]               = useState(1);
+  const [saved, setSaved]                 = useState(false);
+  const [players, setPlayers]             = useState<Player[]>(INITIAL_PLAYERS);
+  const [userClub, setUserClub]           = useState<Club>(CLUBS[0]);
+  const [report, setReport]               = useState<{ news: string[] } | null>(null);
+  const [dilemma, setDilemma]             = useState<Dilemma | null>(null);
+  const [showResults, setShowResults]     = useState(false);
+  const [lineup, setLineup]               = useState<Player[]>([]);
+  const [achievements, setAchievements]   = useState<Achievement[]>([]);
 
   useEffect(() => {
     loadGame().then(data => {
@@ -123,12 +127,23 @@ function App() {
     if (!calendar) return;
     const { rounds, currentRound } = calendar;
     if (currentRound > rounds.length) return;
+
+    const prevStanding = standings.find(s => s.clubId === userClub.id);
+
     const updatedRound = rounds[currentRound - 1].map(simulateMatch);
     const updatedRounds = [...rounds];
     updatedRounds[currentRound - 1] = updatedRound;
     const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
+    const newStandings = computeStandings(updatedRounds.flat());
+
     setCalendar(newCal);
-    setStandings(computeStandings(updatedRounds.flat()));
+    setStandings(newStandings);
+
+    const currStanding = newStandings.find(s => s.clubId === userClub.id);
+    const allMatches = updatedRounds.flat();
+    const newAchievements = checkAchievements(prevStanding, currStanding, allMatches, userClub.id);
+    if (newAchievements.length) setAchievements(newAchievements);
+
     const d = rollDilemma(players);
     if (d) setDilemma(d);
     setShowResults(true);
@@ -204,12 +219,12 @@ function App() {
     );
   }
 
-  const mySquadPlayers  = players.filter(p => p.clubId === userClub.id);
-  const activePlayers   = lineup.length === 11 ? lineup : mySquadPlayers;
-  const oppId           = getOpponentId(calendar, userClub.id);
-  const oppPlayers      = players.filter(p => p.clubId === oppId);
-  const oppClub         = CLUBS.find(c => c.id === oppId);
-  const lastRound       = calendar && calendar.currentRound > 1
+  const mySquadPlayers   = players.filter(p => p.clubId === userClub.id);
+  const activePlayers    = lineup.length === 11 ? lineup : mySquadPlayers;
+  const oppId            = getOpponentId(calendar, userClub.id);
+  const oppPlayers       = players.filter(p => p.clubId === oppId);
+  const oppClub          = CLUBS.find(c => c.id === oppId);
+  const lastRound        = calendar && calendar.currentRound > 1
     ? calendar.rounds[calendar.currentRound - 2] : null;
   const allPlayedMatches = calendar
     ? calendar.rounds.flat().filter(m => m.played) : [];
@@ -237,6 +252,12 @@ function App() {
           userClubId={userClub.id}
           round={calendar!.currentRound - 1}
           onClose={() => setShowResults(false)}
+        />
+      )}
+      {achievements.length > 0 && (
+        <AchievementToast
+          achievements={achievements}
+          onDone={() => setAchievements([])}
         />
       )}
 
