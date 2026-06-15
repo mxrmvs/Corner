@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { PositionFilter, Player, Division } from './types';
+import type { Player, Division } from './types';
 import { effectiveRating } from './types';
 import { PLAYERS as INITIAL_PLAYERS } from './players';
 import { CLUBS } from './clubs';
@@ -76,7 +76,7 @@ function App() {
   const [report, setReport]             = useState<{ news: string[] } | null>(null);
   const [dilemma, setDilemma]           = useState<Dilemma | null>(null);
   const [showResults, setShowResults]   = useState(false);
-  const [lineup, setLineup]             = useState<Player[]>([]);
+  const [, setLineup] = useState<Player[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<Division>('A');
   const [news, setNews]                 = useState<NewsItem[]>([]);
