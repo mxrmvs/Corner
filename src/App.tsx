@@ -21,11 +21,12 @@ import { rollDilemma } from './dilemmas';
 import { applySquadTraining } from './training';
 import type { TrainingFocus } from './training';
 import type { DilemmaChoice, Dilemma } from './dilemmas';
-import { saveGame, loadGame } from './db';
+import { saveGame, loadGame, deleteGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
 type Screen = 'squad' | 'match' | 'table' | 'club' | 'market' | 'training';
+type AppState = 'loading' | 'select' | 'playing';
 
 const NAV: { label: string; value: Screen }[] = [
   { label: '👥 Elenco',   value: 'squad'    },
@@ -37,7 +38,8 @@ const NAV: { label: string; value: Screen }[] = [
 ];
 
 function App() {
-  const [started, setStarted]     = useState(false);
+  const [appState, setAppState]   = useState<AppState>('loading');
+  const [hasSave, setHasSave]     = useState(false);
   const [screen, setScreen]       = useState<Screen>('squad');
   const [filter, setFilter]       = useState<PositionFilter>('ALL');
   const [calendar, setCalendar]   = useState<Calendar | null>(null);
@@ -49,33 +51,53 @@ function App() {
   const [report, setReport]       = useState<{ news: string[] } | null>(null);
   const [dilemma, setDilemma]     = useState<Dilemma | null>(null);
 
-  // tenta carregar save existente
   useEffect(() => {
     loadGame().then(data => {
       if (data) {
-        setCalendar(data.calendar);
-        setStandings(data.standings);
-        setSeason(data.season);
-        if (data.players)  setPlayers(data.players);
-        if (data.userClub) setUserClub(data.userClub);
-        setStarted(true); // já tem save, pula a seleção
+        setHasSave(true);
+        setAppState('select');
+      } else {
+        setAppState('select');
       }
     });
   }, []);
 
   useEffect(() => {
-    if (!calendar) return;
+    if (!calendar || appState !== 'playing') return;
     saveGame({ calendar, standings, season, players, userClub }).then(() => {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     });
   }, [calendar, standings, season, players, userClub]);
 
+  const handleContinue = () => {
+    loadGame().then(data => {
+      if (!data) return;
+      setCalendar(data.calendar);
+      setStandings(data.standings);
+      setSeason(data.season);
+      if (data.players)  setPlayers(data.players);
+      if (data.userClub) setUserClub(data.userClub);
+      setAppState('playing');
+    });
+  };
+
+  const handleNewGame = () => {
+    deleteGame().then(() => {
+      setHasSave(false);
+      setPlayers(INITIAL_PLAYERS);
+      setCalendar(null);
+      setStandings([]);
+      setSeason(1);
+    });
+  };
+
   const handleSelectClub = (club: Club) => {
     setUserClub(club);
-    setCalendar(generateCalendar());
+    const cal = generateCalendar();
+    setCalendar(cal);
     setStandings(computeStandings([]));
-    setStarted(true);
+    setAppState('playing');
   };
 
   const simulateRound = () => {
@@ -134,9 +156,29 @@ function App() {
     if (injuries.length > 0) setReport({ news: injuries });
   };
 
-  // tela de seleção de clube
-  if (!started) {
-    return <ClubSelect clubs={CLUBS} onSelect={handleSelectClub} />;
+  // tela de carregamento
+  if (appState === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#0B0F14] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-4xl font-black tracking-[0.15em] text-[#E6EDF3]">CORNER</h1>
+          <p className="text-[#2DFFA8] text-xs mt-2 animate-pulse">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // tela de seleção
+  if (appState === 'select') {
+    return (
+      <ClubSelect
+        clubs={CLUBS}
+        hasSave={hasSave}
+        onSelect={handleSelectClub}
+        onContinue={handleContinue}
+        onNewGame={handleNewGame}
+      />
+    );
   }
 
   const mySquadPlayers = players.filter(p => p.clubId === userClub.id);
@@ -170,6 +212,10 @@ function App() {
               {label}
             </button>
           ))}
+          <button onClick={() => { deleteGame(); window.location.reload(); }}
+            className="px-4 py-2 rounded-full text-xs font-bold bg-white/[0.06] text-[#FB5C6B] hover:bg-[rgba(251,92,107,0.1)] transition-all cursor-pointer">
+            ⏹ Sair
+          </button>
         </nav>
       </header>
 
