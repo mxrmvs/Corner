@@ -33,7 +33,7 @@ const Bar = ({ value, color }: { value: number; color: string }) => (
   </div>
 );
 
-export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) => {
+export const ClubSelect = ({ club, players, onUpdate, onApplyTraining }: Props) => {
   const [sub, setSub]             = useState<SubScreen>('escalacao');
   const [globalFocus, setGlobal]  = useState<TrainingFocus>('TECHNICAL');
   const [individual, setIndividual] = useState(false);

@@ -24,6 +24,7 @@ import { computeStandings } from './standings';
 import { evolveSquad } from './evolution';
 import { rollDilemma } from './dilemmas';
 import type { TrainingFocus } from './training';
+import { applySquadTraining } from './training';
 import type { DilemmaChoice, Dilemma } from './dilemmas';
 import { saveGame, loadGame, deleteGame } from './db';
 import type { Calendar } from './calendar';
@@ -226,7 +227,7 @@ function App() {
   };
 
   const handleTraining = (focusMap: Record<string, TrainingFocus>) => {
-    const { applySquadTraining } = require('./training');
+    
     const { players: trained, injuries } = applySquadTraining(players, focusMap);
     setPlayers(trained);
     if (injuries.length > 0) {
