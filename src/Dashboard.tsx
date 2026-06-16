@@ -3,16 +3,16 @@ import type { Player } from './types';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 import { effectiveRating } from './types';
+import { FieldView } from './FieldView';
 
-type Screen = 'squad' | 'lineup' | 'table' | 'history' | 'market' | 'training' | 'club';
+type Screen = 'central' | 'lineup' | 'table' | 'history' | 'market' | 'club';
 
 const NAV: { label: string; value: Screen }[] = [
-  { label: 'ELENCO',    value: 'squad'    },
+  { label: 'CENTRAL',   value: 'central'  },
   { label: 'ESCALAÇÃO', value: 'lineup'   },
   { label: 'TABELA',    value: 'table'    },
   { label: 'HISTÓRICO', value: 'history'  },
   { label: 'MERCADO',   value: 'market'   },
-  { label: 'TREINO',    value: 'training' },
   { label: 'CLUBE',     value: 'club'     },
 ];
 
@@ -48,15 +48,9 @@ interface Props {
   children: React.ReactNode;
 }
 
-const POS: Record<string, string> = { GK: 'GK', DEF: 'CB', MID: 'CM', ATT: 'ST' };
-
-const newsColor = (type: NewsItem['type']) => ({
-  win:   { dot: '#4A7C59', text: '#1A1A1A' },
-  loss:  { dot: '#E8432D', text: '#1A1A1A' },
-  draw:  { dot: '#C9A84C', text: '#1A1A1A' },
-  info:  { dot: '#6B6560', text: '#6B6560' },
-  alert: { dot: '#E8432D', text: '#E8432D' },
-}[type]);
+const DOT: Record<string, string> = {
+  win: '#3B6D11', loss: '#A32D2D', draw: '#854F0B', info: '#9E9890', alert: '#A32D2D',
+};
 
 export const Dashboard = ({
   screen, onScreenChange, userClub, players, standings,
@@ -64,316 +58,273 @@ export const Dashboard = ({
   isHome, currentRound, totalRounds,
   onSimulateRound, onNewSeason, onExit, children,
 }: Props) => {
-  const myPlayers = players
-    .filter(p => p.clubId === userClub.id)
-    .sort((a, b) => effectiveRating(b) - effectiveRating(a))
-    .slice(0, 11);
-
+  const myPlayers    = players.filter(p => p.clubId === userClub.id).sort((a, b) => effectiveRating(b) - effectiveRating(a));
   const userStanding = standings.find(s => s.clubId === userClub.id);
-  const topStandings = standings.slice(0, 6);
-  const finished = currentRound > totalRounds;
+  const userPos      = standings.findIndex(s => s.clubId === userClub.id) + 1;
+  const topStandings = standings.slice(0, 8);
+  const finished     = currentRound > totalRounds;
+
+  // Resumo de condição do elenco
+  const lowStamina = myPlayers.filter(p => p.condition.stamina < 40).length;
+  const lowMorale  = myPlayers.filter(p => p.condition.morale  < 40).length;
+  const lowFitness = myPlayers.filter(p => p.condition.matchFitness < 40).length;
 
   return (
-    <div className="min-h-screen bg-[#F2EDE4] flex flex-col font-sans">
+    <div style={{ minHeight: '100vh', background: '#F2EDE4', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui' }}>
 
-      {/* HEADER */}
-      <header className="flex justify-between items-center px-5 py-2.5 bg-[#1A1A1A]"
-        style={{ borderBottom: '1px solid #333' }}>
-        <div className="flex items-center gap-4">
-          <span style={{ fontFamily: 'Georgia, serif' }}
-            className="text-lg font-black text-white tracking-tight">CORNER</span>
-          <span className="text-[10px] text-[#6B6560] tracking-[0.08em] uppercase">
+      {/* BARRA DE CONTEXTO */}
+      <div style={{ background: '#1A1A1A', padding: '6px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <span style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 900, color: 'white' }}>CORNER</span>
+          <span style={{ fontSize: '10px', color: '#6B6560', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {userClub.name} · Série {userClub.division} · T{season}
-            {saved && <span className="ml-2 text-[#4A7C59]">✓ salvo</span>}
+            {saved && <span style={{ color: '#4A7C59', marginLeft: '8px' }}>✓</span>}
           </span>
-          <span className="font-mono text-[10px] text-[#E8432D]">#{seed}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {userStanding && (
+            <div style={{ display: 'flex', gap: '16px' }}>
+              {[
+                { l: 'POS', v: `${userPos}º`        },
+                { l: 'PTS', v: userStanding.points   },
+                { l: 'V',   v: userStanding.wins     },
+                { l: 'R$',  v: fmt(userClub.balance) },
+              ].map(({ l, v }) => (
+                <div key={l} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '9px', color: '#6B6560', letterSpacing: '0.06em' }}>{l}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'white' }}>{v}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#E8432D' }}>#{seed}</span>
+        </div>
+      </div>
+
+      {/* NAV */}
+      <div style={{ background: 'white', borderBottom: '1px solid #D6CFC4', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex' }}>
           {NAV.map(({ label, value }) => (
             <button key={value} onClick={() => onScreenChange(value)}
-              className="px-3 py-1.5 text-[10px] font-bold tracking-[0.08em] cursor-pointer transition-colors"
               style={{
-                background: screen === value ? '#E8432D' : 'transparent',
-                color: screen === value ? 'white' : '#6B6560',
-                border: 'none',
+                padding: '10px 14px', border: 'none',
+                borderBottom: screen === value ? '2px solid #E8432D' : '2px solid transparent',
+                background: 'transparent', cursor: 'pointer', marginBottom: '-1px',
+                fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em',
+                color: screen === value ? '#E8432D' : '#6B6560',
               }}>
               {label}
             </button>
           ))}
-          <button onClick={onExit}
-            className="ml-2 px-3 py-1.5 text-[10px] font-bold tracking-[0.08em] text-[#E8432D] cursor-pointer"
-            style={{ background: 'transparent', border: 'none' }}>
-            SAIR
-          </button>
         </div>
-      </header>
+        <button onClick={onExit} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '10px', fontWeight: 700, color: '#9E9890', letterSpacing: '0.1em' }}>
+          SAIR
+        </button>
+      </div>
 
-      {/* CORPO: 3 colunas no dashboard, full-width nas outras telas */}
-      {screen === 'squad' ? (
-        <div className="flex-1 grid overflow-hidden"
-          style={{ gridTemplateColumns: '260px 1fr 200px' }}>
+      {/* CENTRAL */}
+      {screen === 'central' ? (
+        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '220px 1fr 260px', overflow: 'hidden' }}>
 
-          {/* COL 1 — Elenco */}
-          <div className="overflow-y-auto bg-white" style={{ borderRight: '1px solid #D6CFC4' }}>
-            <div className="px-3 py-2 sticky top-0 bg-white z-10"
-              style={{ borderBottom: '1px solid #D6CFC4' }}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1A1A1A]">
-                  Elenco
-                </span>
-                <span className="text-[10px] text-[#9E9890]">{myPlayers.length} jogadores</span>
-              </div>
-              {/* Legenda condição */}
-              <div className="flex gap-3">
-                {[['#4A7C59','STA'],['#C9A84C','RIT'],['#E8432D','MOR']].map(([c, l]) => (
-                  <div key={l} className="flex items-center gap-1">
-                    <div className="w-4 h-1.5 rounded-full" style={{ background: c }} />
-                    <span className="text-[9px] text-[#9E9890]">{l}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* COL 1 — CAMPO */}
+          <div style={{ background: 'white', borderRight: '1px solid #D6CFC4', display: 'flex', flexDirection: 'column', padding: '12px' }}>
+            <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890', marginBottom: '6px' }}>
+              {userClub.name} · {userClub.tactical.formation}
+            </p>
+            <FieldView players={myPlayers} formation={userClub.tactical.formation} />
 
-            {myPlayers.map((p, i) => {
-              const eff = effectiveRating(p);
-              return (
-                <div key={p.id} className="flex items-center gap-2 px-3 py-2"
-                  style={{
-                    borderBottom: '1px solid #F5F2EE',
-                    background: i % 2 === 0 ? 'white' : '#FAF8F5',
-                  }}>
-                  <span className="text-[9px] text-[#9E9890] w-5 text-right">{i + 1}</span>
-                  <span className="text-[10px] text-[#9E9890] w-6">{POS[p.position]}</span>
-                  <span style={{ fontFamily: 'Georgia, serif' }}
-                    className="flex-1 text-[12px] font-bold text-[#1A1A1A] truncate">{p.name}</span>
-                  <div className="flex flex-col gap-0.5 w-10">
-                    {[
-                      [p.condition.stamina, '#4A7C59'],
-                      [p.condition.matchFitness, '#C9A84C'],
-                      [p.condition.morale, '#E8432D'],
-                    ].map(([val, color], idx) => (
-                      <div key={idx} className="w-full rounded-full overflow-hidden"
-                        style={{ height: '2px', background: '#E8E4DC' }}>
-                        <div style={{ width: `${val}%`, height: '2px', background: color as string }} />
-                      </div>
-                    ))}
-                  </div>
-                  <span style={{ fontFamily: 'Georgia, serif' }}
-                    className={`text-base font-black w-7 text-right ${eff >= 85 ? 'text-[#E8432D]' : 'text-[#1A1A1A]'}`}>
-                    {eff}
-                  </span>
+            {/* Resumo condição */}
+            <div style={{ marginTop: '10px', background: '#F2EDE4', padding: '10px', border: '1px solid #D6CFC4' }}>
+              <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890', marginBottom: '6px' }}>
+                Condição do elenco
+              </p>
+              {lowStamina === 0 && lowMorale === 0 && lowFitness === 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3B6D11' }} />
+                  <span style={{ fontSize: '10px', color: '#3B6D11', fontWeight: 700 }}>Elenco em boa forma</span>
                 </div>
-              );
-            })}
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {lowStamina > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#E8432D' }} />
+                      <span style={{ fontSize: '10px', color: '#A32D2D' }}>{lowStamina} cansado{lowStamina > 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+                  {lowMorale > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+                      <span style={{ fontSize: '10px', color: '#854F0B' }}>{lowMorale} com moral baixo</span>
+                    </div>
+                  )}
+                  {lowFitness > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6B6560' }} />
+                      <span style={{ fontSize: '10px', color: '#6B6560' }}>{lowFitness} sem ritmo</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* COL 2 — Centro */}
-          <div className="overflow-y-auto p-5 bg-[#F2EDE4]">
+          {/* COL 2 — CENTRO */}
+          <div style={{ overflowY: 'auto', padding: '16px 20px', background: '#F2EDE4' }}>
+
             {/* Próxima partida */}
-            <p className="text-[10px] text-[#9E9890] tracking-[0.12em] uppercase mb-3">
+            <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9E9890', marginBottom: '8px' }}>
               {finished ? 'Temporada encerrada' : `Próxima Partida · Rodada ${currentRound} de ${totalRounds}`}
             </p>
 
-            {!finished && oppClub && (
-              <div className="bg-white p-5 mb-4" style={{ border: '1px solid #D6CFC4' }}>
-                <div className="grid gap-3 mb-4 items-center"
-                  style={{ gridTemplateColumns: '1fr auto 1fr' }}>
+            {!finished && oppClub ? (
+              <div style={{ background: 'white', border: '1px solid #D6CFC4', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 72px 1fr', padding: '14px 16px', alignItems: 'center', borderBottom: '1px solid #D6CFC4' }}>
                   <div>
-                    <div style={{ fontFamily: 'Georgia, serif' }}
-                      className="text-xl font-black text-[#E8432D]">{userClub.name}</div>
-                    <div className="text-[10px] text-[#9E9890] font-sans mt-1">
-                      OVR {myOvr} · {isHome ? 'Casa' : 'Fora'}
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 900, color: '#E8432D', lineHeight: 1 }}>{userClub.name}</div>
+                    <div style={{ fontSize: '10px', color: '#9E9890', marginTop: '2px' }}>OVR {myOvr} · {isHome ? 'Casa' : 'Fora'}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 900, color: '#1A1A1A' }}>VS</div>
+                    <div style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '2px',
+                      color: myOvr > oppOvr ? '#3B6D11' : myOvr < oppOvr ? '#A32D2D' : '#854F0B' }}>
+                      {myOvr > oppOvr ? 'Favorito' : myOvr < oppOvr ? 'Azarão' : 'Igual'}
                     </div>
                   </div>
-                  <div className="text-center px-4">
-                    <div style={{ fontFamily: 'Georgia, serif' }}
-                      className="text-2xl font-black text-[#1A1A1A]">VS</div>
-                    <div className="text-[9px] font-bold uppercase tracking-[0.08em] mt-1"
-                      style={{ color: myOvr > oppOvr ? '#4A7C59' : myOvr < oppOvr ? '#E8432D' : '#C9A84C' }}>
-                      {myOvr > oppOvr ? 'Favorito' : myOvr < oppOvr ? 'Azarão' : 'Equilibrado'}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div style={{ fontFamily: 'Georgia, serif' }}
-                      className="text-xl font-black text-[#1A1A1A]">{oppClub.name}</div>
-                    <div className="text-[10px] text-[#9E9890] font-sans mt-1">
-                      OVR {oppOvr} · {!isHome ? 'Casa' : 'Fora'}
-                    </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 900, color: '#1A1A1A', lineHeight: 1 }}>{oppClub.name}</div>
+                    <div style={{ fontSize: '10px', color: '#9E9890', marginTop: '2px' }}>OVR {oppOvr} · {!isHome ? 'Casa' : 'Fora'}</div>
                   </div>
                 </div>
                 <button onClick={onSimulateRound}
-                  className="w-full bg-[#1A1A1A] text-white font-bold text-[11px] tracking-[0.12em] uppercase py-3 cursor-pointer hover:bg-[#333] transition-colors">
+                  style={{ width: '100%', background: '#1A1A1A', color: 'white', border: 'none', padding: '12px', cursor: 'pointer', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                   ▶ SIMULAR RODADA COMPLETA
                 </button>
               </div>
-            )}
-
-            {finished && (
-              <div className="bg-white p-5 mb-4 text-center" style={{ border: '1px solid #D6CFC4' }}>
-                <div style={{ fontFamily: 'Georgia, serif' }}
-                  className="text-2xl font-black text-[#1A1A1A] mb-2">Temporada encerrada</div>
+            ) : finished ? (
+              <div style={{ background: 'white', border: '1px solid #D6CFC4', padding: '16px', textAlign: 'center', marginBottom: '16px' }}>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontWeight: 900, color: '#1A1A1A', marginBottom: '10px' }}>Temporada {season} encerrada</div>
                 <button onClick={onNewSeason}
-                  className="bg-[#E8432D] text-white font-bold text-[11px] tracking-[0.12em] uppercase px-6 py-3 cursor-pointer hover:bg-[#D63520] transition-colors">
-                  INICIAR NOVA TEMPORADA →
+                  style={{ background: '#E8432D', color: 'white', border: 'none', padding: '9px 20px', cursor: 'pointer', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  NOVA TEMPORADA →
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {/* Mini tabela */}
-            <p className="text-[10px] text-[#9E9890] tracking-[0.12em] uppercase mb-2">
-              Classificação · Top 6
-            </p>
-            <div className="bg-white mb-4" style={{ border: '1px solid #D6CFC4' }}>
-              <div className="grid px-3 py-1.5 bg-[#1A1A1A]"
-                style={{ gridTemplateColumns: '20px 1fr 28px 28px 28px 36px' }}>
-                {['#', 'Clube', 'PJ', 'V', 'D', 'PTS'].map((h, i) => (
-                  <div key={h} className="text-[9px] font-bold tracking-[0.08em] text-[#9E9890]"
-                    style={{ textAlign: i > 0 ? 'center' : 'left' }}>{h}</div>
+            {/* Tabela compacta */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9E9890', margin: 0 }}>Classificação</p>
+              <button onClick={() => onScreenChange('table')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '9px', fontWeight: 700, color: '#E8432D', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                VER COMPLETA →
+              </button>
+            </div>
+            <div style={{ background: 'white', border: '1px solid #D6CFC4', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 32px 32px 32px 40px', padding: '5px 10px', background: '#1A1A1A' }}>
+                {['#','Clube','PJ','V','D','PTS'].map((h, i) => (
+                  <span key={h} style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', color: '#9E9890', textAlign: i > 0 ? 'center' : 'left' }}>{h}</span>
                 ))}
               </div>
-              {topStandings.map((s, i) => {
-                const isUser = s.clubId === userClub.id;
+              {topStandings.map((st, i) => {
+                const isUser = st.clubId === userClub.id;
                 return (
-                  <div key={s.clubId} className="grid px-3 py-2"
-                    style={{
-                      gridTemplateColumns: '20px 1fr 28px 28px 28px 36px',
-                      borderBottom: '1px solid #F5F2EE',
-                      background: isUser ? '#FEF0ED' : i % 2 === 0 ? 'white' : '#FAF8F5',
-                    }}>
-                    <div className="text-[11px] font-bold text-[#E8432D] text-center">{i + 1}</div>
-                    <div style={{ fontFamily: 'Georgia, serif' }}
-                      className={`text-[12px] font-bold truncate ${isUser ? 'text-[#E8432D]' : 'text-[#1A1A1A]'}`}>
-                      {s.clubName}
-                    </div>
-                    {[s.played, s.wins, s.losses, s.points].map((n, idx) => (
-                      <div key={idx} className="text-[11px] text-[#6B6560] text-center">{n}</div>
+                  <div key={st.clubId} style={{
+                    display: 'grid', gridTemplateColumns: '20px 1fr 32px 32px 32px 40px',
+                    padding: '6px 10px', borderBottom: i < 7 ? '1px solid #F0EDE8' : 'none',
+                    background: isUser ? '#FEF0ED' : i % 2 === 0 ? 'white' : '#FAFAF8',
+                    borderLeft: isUser ? '2px solid #E8432D' : '2px solid transparent',
+                  }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: i < 6 ? '#3B6D11' : '#9E9890', textAlign: 'center' }}>{i+1}</span>
+                    <span style={{ fontFamily: 'Georgia, serif', fontSize: '11px', fontWeight: 700, color: isUser ? '#E8432D' : '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {st.clubName}
+                    </span>
+                    {[st.played, st.wins, st.losses, st.points].map((n, idx) => (
+                      <span key={idx} style={{ fontSize: '10px', color: '#6B6560', textAlign: 'center' }}>{n}</span>
                     ))}
                   </div>
                 );
               })}
             </div>
 
-            {/* Feed de notícias */}
-            <p className="text-[10px] text-[#9E9890] tracking-[0.12em] uppercase mb-2">
-              Feed · Temporada {season}
+            {/* Feed */}
+            <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9E9890', marginBottom: '6px' }}>
+              Eventos · T{season}
             </p>
-            <div className="bg-white" style={{ border: '1px solid #D6CFC4' }}>
+            <div style={{ background: 'white', border: '1px solid #D6CFC4' }}>
               {news.length === 0 ? (
-                <div className="px-4 py-6 text-center text-[11px] text-[#9E9890]">
-                  Nenhuma notícia ainda. Simule rodadas para ver eventos.
+                <div style={{ padding: '16px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '11px', color: '#9E9890' }}>Simule rodadas para ver eventos.</p>
                 </div>
               ) : (
-                news.slice(0, 12).map((n) => {
-                  const c = newsColor(n.type);
-                  return (
-                    <div key={n.id} className="flex items-start gap-3 px-3 py-2.5"
-                      style={{ borderBottom: '1px solid #F5F2EE' }}>
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                        style={{ background: c.dot }} />
-                      <span className="text-[11px] leading-relaxed" style={{ color: c.text }}>
-                        {n.text}
-                      </span>
-                    </div>
-                  );
-                })
+                news.slice(0, 20).map(n => (
+                  <div key={n.id} style={{ display: 'flex', gap: '8px', padding: '7px 12px', borderBottom: '1px solid #F5F2EE', alignItems: 'flex-start' }}>
+                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: DOT[n.type], marginTop: '5px', flexShrink: 0 }} />
+                    <span style={{ fontSize: '11px', color: '#1A1A1A', lineHeight: 1.5 }}>{n.text}</span>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {/* COL 3 — Info do clube */}
-          <div className="bg-white overflow-y-auto p-4" style={{ borderLeft: '1px solid #D6CFC4' }}>
-            <p className="text-[10px] text-[#9E9890] tracking-[0.1em] uppercase mb-2">Seu clube</p>
-            <div style={{ fontFamily: 'Georgia, serif' }}
-              className="text-2xl font-black text-[#1A1A1A] leading-none mb-1">{userClub.name}</div>
-            <p className="text-[11px] text-[#6B6560] mb-4">
-              Série {userClub.division} · Temporada {season}
-            </p>
+          {/* COL 3 — INFO CLUBE */}
+          <div style={{ background: 'white', borderLeft: '1px solid #D6CFC4', overflowY: 'auto', padding: '16px' }}>
+            <p style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890', marginBottom: '8px' }}>Seu clube</p>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 900, color: '#1A1A1A', lineHeight: 1.1, marginBottom: '2px' }}>{userClub.name}</h2>
+            <p style={{ fontSize: '11px', color: '#6B6560', marginBottom: '14px' }}>Série {userClub.division} · T{season}</p>
 
-            <div className="flex flex-col gap-0" style={{ border: '1px solid #D6CFC4' }}>
+            <div style={{ border: '1px solid #D6CFC4', marginBottom: '12px' }}>
               {[
-                { label: 'Caixa', value: fmt(userClub.balance) },
-                { label: 'Reputação', value: userClub.reputation },
-                { label: 'Formação', value: userClub.tactical.formation },
-                { label: 'Estádio', value: `${(userClub.stadiumCapacity / 1000).toFixed(0)}k` },
+                { label: 'Caixa',     value: fmt(userClub.balance)                          },
+                { label: 'Reputação', value: userClub.reputation                            },
+                { label: 'Formação',  value: userClub.tactical.formation                   },
+                { label: 'Estádio',   value: `${(userClub.stadiumCapacity/1000).toFixed(0)}k` },
               ].map(({ label, value }, i) => (
-                <div key={label} className="flex justify-between items-center px-3 py-2.5"
-                  style={{ borderBottom: i < 3 ? '1px solid #F5F2EE' : 'none' }}>
-                  <span className="text-[11px] text-[#6B6560]">{label}</span>
-                  <span style={{ fontFamily: 'Georgia, serif' }}
-                    className="text-[13px] font-bold text-[#1A1A1A]">{value}</span>
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 12px', borderBottom: i < 3 ? '1px solid #F0EDE8' : 'none', background: i % 2 === 0 ? 'white' : '#FAFAF8' }}>
+                  <span style={{ fontSize: '11px', color: '#6B6560' }}>{label}</span>
+                  <span style={{ fontFamily: 'Georgia, serif', fontSize: '12px', fontWeight: 700, color: '#1A1A1A' }}>{value}</span>
                 </div>
               ))}
             </div>
 
             {userStanding && (
-              <div className="mt-4" style={{ border: '1px solid #D6CFC4' }}>
-                <div className="px-3 py-2 bg-[#1A1A1A]">
-                  <span className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#9E9890]">
-                    Campeonato
-                  </span>
+              <div style={{ border: '1px solid #D6CFC4', marginBottom: '12px' }}>
+                <div style={{ background: '#1A1A1A', padding: '5px 12px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890' }}>Campeonato</span>
                 </div>
                 {[
-                  { label: 'Posição', value: `${standings.findIndex(s => s.clubId === userClub.id) + 1}º` },
-                  { label: 'Pontos', value: userStanding.points },
-                  { label: 'Vitórias', value: userStanding.wins },
-                  { label: 'Saldo', value: userStanding.goalsFor - userStanding.goalsAgainst },
-                ].map(({ label, value }, i) => (
-                  <div key={label} className="flex justify-between items-center px-3 py-2"
-                    style={{ borderBottom: i < 3 ? '1px solid #F5F2EE' : 'none' }}>
-                    <span className="text-[11px] text-[#6B6560]">{label}</span>
-                    <span style={{ fontFamily: 'Georgia, serif' }}
-                      className="text-[13px] font-bold text-[#1A1A1A]">{value}</span>
+                  { label: 'Posição', value: `${userPos}º`, green: userPos <= 6 },
+                  { label: 'Pontos',  value: userStanding.points, green: false },
+                  { label: 'Vitórias',value: userStanding.wins, green: false },
+                  { label: 'Saldo',   value: userStanding.goalsFor - userStanding.goalsAgainst, green: false },
+                ].map(({ label, value, green }, i) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 12px', borderBottom: i < 3 ? '1px solid #F0EDE8' : 'none', background: i % 2 === 0 ? 'white' : '#FAFAF8' }}>
+                    <span style={{ fontSize: '11px', color: '#6B6560' }}>{label}</span>
+                    <span style={{ fontFamily: 'Georgia, serif', fontSize: '12px', fontWeight: 700, color: green ? '#3B6D11' : '#1A1A1A' }}>{value}</span>
                   </div>
                 ))}
               </div>
             )}
 
-            <div className="mt-4 pt-3" style={{ borderTop: '1px solid #D6CFC4' }}>
-              <div className="flex gap-3 mb-2">
-                {[['#4A7C59','Stamina'],['#C9A84C','Ritmo'],['#E8432D','Moral']].map(([c, l]) => (
-                  <div key={l} className="flex items-center gap-1">
-                    <div className="w-4 h-1.5 rounded-full" style={{ background: c }} />
-                    <span className="text-[9px] text-[#9E9890]">{l}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[9px] text-[#9E9890] leading-relaxed">
-                As barras mostram a condição atual de cada jogador. Jogadores cansados rendem menos em campo.
-              </p>
+            {/* Ações rápidas */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button onClick={() => onScreenChange('lineup')} style={{ padding: '8px', border: '1px solid #D6CFC4', background: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1A1A1A' }}>
+                ESCALAÇÃO →
+              </button>
+              <button onClick={() => onScreenChange('club')} style={{ padding: '8px', border: '1px solid #D6CFC4', background: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1A1A1A' }}>
+                TREINO →
+              </button>
+              <button onClick={() => onScreenChange('market')} style={{ padding: '8px', border: '1px solid #D6CFC4', background: 'white', cursor: 'pointer', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1A1A1A' }}>
+                MERCADO →
+              </button>
             </div>
           </div>
         </div>
+
       ) : (
-        /* Telas secundárias — full width */
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto px-6 py-6">
+        <div style={{ flex: 1, overflowY: 'auto', background: '#F2EDE4' }}>
+          <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
             {children}
           </div>
         </div>
       )}
-
-      {/* TAB BAR mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#F2EDE4] z-10"
-        style={{ borderTop: '1px solid #1A1A1A' }}>
-        <div className="grid grid-cols-4">
-          {NAV.slice(0, 4).map(({ label, value }) => (
-            <button key={value} onClick={() => onScreenChange(value)}
-              className="flex flex-col items-center py-2.5 gap-0.5 text-[9px] font-bold uppercase tracking-widest cursor-pointer"
-              style={{ color: screen === value ? '#E8432D' : '#6B6560', background: 'none', border: 'none' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-3" style={{ borderTop: '1px solid #D6CFC4' }}>
-          {NAV.slice(4).map(({ label, value }) => (
-            <button key={value} onClick={() => onScreenChange(value)}
-              className="flex flex-col items-center py-2 gap-0.5 text-[9px] font-bold uppercase tracking-widest cursor-pointer"
-              style={{ color: screen === value ? '#E8432D' : '#6B6560', background: 'none', border: 'none' }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
     </div>
   );
 };

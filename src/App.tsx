@@ -12,7 +12,6 @@ import { Dashboard } from './Dashboard';
 import { TransferMarket } from './TransferMarket';
 import { SeasonReport } from './SeasonReport';
 import { DilemmaModal } from './DilemmaModal';
-import { TrainingScreen } from './TrainingScreen';
 import { RoundResults } from './RoundResults';
 import { MatchHistory } from './MatchHistory';
 import { LineupScreen } from './LineupScreen';
@@ -24,14 +23,13 @@ import { simulateMatch } from './simulate';
 import { computeStandings } from './standings';
 import { evolveSquad } from './evolution';
 import { rollDilemma } from './dilemmas';
-import { applySquadTraining } from './training';
 import type { TrainingFocus } from './training';
 import type { DilemmaChoice, Dilemma } from './dilemmas';
 import { saveGame, loadGame, deleteGame } from './db';
 import type { Calendar } from './calendar';
 import type { ClubStanding } from './leagueTypes';
 
-type Screen = 'squad' | 'lineup' | 'table' | 'history' | 'market' | 'training' | 'club';
+type Screen = 'central' | 'lineup' | 'table' | 'history' | 'market' | 'club';
 type AppState = 'loading' | 'splash' | 'select' | 'playing';
 
 interface NewsItem { id: string; text: string; type: 'win' | 'loss' | 'draw' | 'info' | 'alert'; }
@@ -66,7 +64,7 @@ function isHomeGame(calendar: Calendar | null, userClubId: string): boolean {
 
 function App() {
   const [appState, setAppState]         = useState<AppState>('loading');
-  const [screen, setScreen]             = useState<Screen>('squad');
+  const [screen, setScreen]             = useState<Screen>('central');
   const [calendar, setCalendar]         = useState<Calendar | null>(null);
   const [standings, setStandings]       = useState<ClubStanding[]>([]);
   const [season, setSeason]             = useState(1);
@@ -76,7 +74,6 @@ function App() {
   const [report, setReport]             = useState<{ news: string[] } | null>(null);
   const [dilemma, setDilemma]           = useState<Dilemma | null>(null);
   const [showResults, setShowResults]   = useState(false);
-  const [, setLineup] = useState<Player[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<Division>('A');
   const [news, setNews]                 = useState<NewsItem[]>([]);
@@ -88,15 +85,9 @@ function App() {
     loadGame().then(data => {
       if (data) {
         setHasSave(true);
-        const pos = data.standings.findIndex(s => s.clubId === data.userClub?.id) + 1;
+        const pos      = data.standings.findIndex(s => s.clubId === data.userClub?.id) + 1;
         const standing = data.standings.find(s => s.clubId === data.userClub?.id);
-        setSavedInfo({
-          club: data.userClub?.name ?? '',
-          season: data.season,
-          pos,
-          wins: standing?.wins ?? 0,
-          pts: standing?.points ?? 0,
-        });
+        setSavedInfo({ club: data.userClub?.name ?? '', season: data.season, pos, wins: standing?.wins ?? 0, pts: standing?.points ?? 0 });
       }
       setAppState('splash');
     });
@@ -111,7 +102,7 @@ function App() {
   }, [calendar, standings, season, players, userClub]);
 
   const addNews = (items: NewsItem[]) =>
-    setNews(prev => [...items, ...prev].slice(0, 50));
+    setNews(prev => [...items, ...prev].slice(0, 60));
 
   const handleContinue = () => {
     loadGame().then(data => {
@@ -150,27 +141,42 @@ function App() {
     if (!calendar) return;
     const { rounds, currentRound } = calendar;
     if (currentRound > rounds.length) return;
-    const prevStanding = standings.find(s => s.clubId === userClub.id);
-    const updatedRound = rounds[currentRound - 1].map(simulateMatch);
+    const prevStanding  = standings.find(s => s.clubId === userClub.id);
+    const updatedRound  = rounds[currentRound - 1].map(simulateMatch);
     const updatedRounds = [...rounds];
     updatedRounds[currentRound - 1] = updatedRound;
-    const newCal: Calendar = { rounds: updatedRounds, currentRound: currentRound + 1 };
-    const newStandings = computeStandings(updatedRounds.flat());
+    const newCal        = { rounds: updatedRounds, currentRound: currentRound + 1 };
+    const newStandings  = computeStandings(updatedRounds.flat());
     setCalendar(newCal);
     setStandings(newStandings);
 
-    const userMatch = updatedRound.find(m =>
-      m.homeClubId === userClub.id || m.awayClubId === userClub.id
-    );
-    if (userMatch) {
-      const isHome = userMatch.homeClubId === userClub.id;
-      const myGoals  = isHome ? userMatch.homeGoals! : userMatch.awayGoals!;
-      const oppGoals = isHome ? userMatch.awayGoals! : userMatch.homeGoals!;
-      const oppName  = CLUBS.find(c => c.id === (isHome ? userMatch.awayClubId : userMatch.homeClubId))?.name ?? 'Adversário';
-      const result   = myGoals > oppGoals ? 'win' : myGoals < oppGoals ? 'loss' : 'draw';
-      const prefix   = result === 'win' ? 'Vitória' : result === 'loss' ? 'Derrota' : 'Empate';
-      addNews([{ id: `r${currentRound}`, text: `Rod. ${currentRound} · ${prefix} ${myGoals}x${oppGoals} vs ${oppName}`, type: result }]);
-    }
+    // Gera notícias — resultado do user + destaques dos outros jogos
+    const newItems: NewsItem[] = [];
+    updatedRound.forEach(m => {
+      const homeName = CLUBS.find(c => c.id === m.homeClubId)?.name ?? m.homeClubId;
+      const awayName = CLUBS.find(c => c.id === m.awayClubId)?.name ?? m.awayClubId;
+      const isUser   = m.homeClubId === userClub.id || m.awayClubId === userClub.id;
+      if (isUser) {
+        const ih  = m.homeClubId === userClub.id;
+        const ug  = ih ? m.homeGoals! : m.awayGoals!;
+        const og  = ih ? m.awayGoals! : m.homeGoals!;
+        const opp = ih ? awayName : homeName;
+        const res = ug > og ? 'win' : ug < og ? 'loss' : 'draw';
+        const pfx = res === 'win' ? '✓ Vitória' : res === 'loss' ? '✗ Derrota' : '= Empate';
+        newItems.push({ id: `r${currentRound}-user`, text: `Rod.${currentRound} · ${pfx} ${ug}×${og} vs ${opp}`, type: res });
+      } else {
+        // Destaques: goleadas e resultados de outros jogos
+        const diff = Math.abs(m.homeGoals! - m.awayGoals!);
+        if (diff >= 3) {
+          const winner = m.homeGoals! > m.awayGoals! ? homeName : awayName;
+          const loser  = m.homeGoals! > m.awayGoals! ? awayName : homeName;
+          newItems.push({ id: `r${currentRound}-${m.homeClubId}`, text: `Goleada: ${winner} ${m.homeGoals}×${m.awayGoals} ${loser}`, type: 'info' });
+        } else {
+          newItems.push({ id: `r${currentRound}-${m.homeClubId}`, text: `${homeName} ${m.homeGoals}×${m.awayGoals} ${awayName}`, type: 'info' });
+        }
+      }
+    });
+    addNews(newItems);
 
     const currStanding = newStandings.find(s => s.clubId === userClub.id);
     const newAch = checkAchievements(prevStanding, currStanding, updatedRounds.flat(), userClub.id);
@@ -204,7 +210,7 @@ function App() {
     setStandings(computeStandings([]));
     setSeason(s => s + 1);
     setReport(null);
-    addNews([{ id: `season${season + 1}`, text: `Temporada ${season + 1} iniciada.`, type: 'info' }]);
+    addNews([{ id: `season${season+1}`, text: `Temporada ${season+1} iniciada.`, type: 'info' }]);
   };
 
   const handleBuy = (p: Player) => {
@@ -220,28 +226,25 @@ function App() {
   };
 
   const handleTraining = (focusMap: Record<string, TrainingFocus>) => {
+    const { applySquadTraining } = require('./training');
     const { players: trained, injuries } = applySquadTraining(players, focusMap);
     setPlayers(trained);
     if (injuries.length > 0) {
       setReport({ news: injuries });
-      injuries.forEach((n, i) => addNews([{ id: `inj${i}`, text: n, type: 'alert' }]));
+      injuries.forEach((n: string, i: number) => addNews([{ id: `inj${i}`, text: n, type: 'alert' }]));
     }
   };
 
   const handleConfirmLineup = (confirmed: Player[]) => {
-    setLineup(confirmed);
-    setScreen('squad');
+    setScreen('central');
   };
 
   if (appState === 'loading') {
     return (
-      <div className="min-h-screen bg-[#F2EDE4] flex items-center justify-center">
-        <div className="text-center">
-          <h1 style={{ fontFamily: 'Georgia, serif', letterSpacing: '-1px' }}
-            className="text-5xl font-black text-[#1A1A1A]">CORNER</h1>
-          <p className="text-[10px] text-[#E8432D] tracking-[0.15em] uppercase mt-2 font-sans">
-            Carregando...
-          </p>
+      <div style={{ minHeight: '100vh', background: '#F2EDE4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '48px', fontWeight: 900, color: '#1A1A1A', letterSpacing: '-1px' }}>CORNER</h1>
+          <p style={{ fontFamily: 'system-ui', fontSize: '10px', color: '#E8432D', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: '8px' }}>Carregando...</p>
         </div>
       </div>
     );
@@ -278,8 +281,7 @@ function App() {
   const mySquadPlayers   = players.filter(p => p.clubId === userClub.id);
   const oppId            = getOpponentId(calendar, userClub.id);
   const oppClub          = CLUBS.find(c => c.id === oppId);
-  const lastRound        = calendar && calendar.currentRound > 1
-    ? calendar.rounds[calendar.currentRound - 2] : null;
+  const lastRound        = calendar && calendar.currentRound > 1 ? calendar.rounds[calendar.currentRound - 2] : null;
   const allPlayedMatches = calendar ? calendar.rounds.flat().filter(m => m.played) : [];
   const myOvr            = teamOvr(userClub.id, players);
   const oppOvr           = teamOvr(oppId, players);
@@ -288,9 +290,7 @@ function App() {
   return (
     <>
       {report && <SeasonReport news={report.news} season={season} onClose={confirmNewSeason} />}
-      {dilemma && !report && (
-        <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />
-      )}
+      {dilemma && !report && <DilemmaModal dilemma={dilemma} players={players} onChoose={handleDilemmaChoice} />}
       {showResults && lastRound && (
         <RoundResults matches={lastRound} clubs={CLUBS} userClubId={userClub.id}
           round={calendar!.currentRound - 1} onClose={() => setShowResults(false)} />
@@ -321,34 +321,35 @@ function App() {
         onExit={() => { deleteGame(); window.location.reload(); }}
       >
         {screen === 'lineup' && (
-          <LineupScreen
-            players={mySquadPlayers}
-            onConfirm={handleConfirmLineup}
-            onBack={() => setScreen('squad')}
-          />
+          <LineupScreen players={mySquadPlayers} onConfirm={handleConfirmLineup} onBack={() => setScreen('central')} />
         )}
         {screen === 'table' && calendar && (
-          <div className="overflow-x-auto">
-            <LeagueTable
-              standings={standings}
-              userClubId={userClub.id}
-              currentRound={calendar.currentRound}
-              totalRounds={calendar.rounds.length}
-              onSimulateRound={simulateRound}
-              onNewSeason={handleNewSeason}
-              onShowResults={() => setShowResults(true)}
-            />
+          <div style={{ overflowX: 'auto' }}>
+            <LeagueTable standings={standings} userClubId={userClub.id}
+              currentRound={calendar.currentRound} totalRounds={calendar.rounds.length}
+              onSimulateRound={simulateRound} onNewSeason={handleNewSeason}
+              onShowResults={() => setShowResults(true)} />
           </div>
         )}
         {screen === 'history' && (
           <MatchHistory matches={allPlayedMatches} clubs={CLUBS} userClubId={userClub.id} />
         )}
-        {screen === 'club' && <ClubScreen club={userClub} onUpdate={setUserClub} />}
-        {screen === 'market' && (
-          <TransferMarket allPlayers={players} userClub={userClub} onBuy={handleBuy} onSell={handleSell} />
+        {screen === 'club' && (
+          <ClubScreen
+            club={userClub}
+            players={players}
+            onUpdate={setUserClub}
+            onApplyTraining={handleTraining}
+          />
         )}
-        {screen === 'training' && (
-          <TrainingScreen players={players} onApply={handleTraining} />
+        {screen === 'market' && (
+          <TransferMarket
+            allPlayers={players}
+            allClubs={CLUBS}
+            userClub={userClub}
+            onBuy={handleBuy}
+            onSell={handleSell}
+          />
         )}
       </Dashboard>
     </>
