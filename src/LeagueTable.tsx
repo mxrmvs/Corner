@@ -1,12 +1,5 @@
 import type { ClubStanding } from './leagueTypes';
 
-const rowBg = (i: number, isUser: boolean) => {
-  if (isUser) return 'bg-[rgba(45,255,168,0.06)] border-l-2 border-[#2DFFA8]';
-  if (i < 4)  return 'bg-white/[0.01]';
-  if (i >= 16) return 'bg-[rgba(251,100,107,0.04)]';
-  return '';
-};
-
 interface Props {
   standings: ClubStanding[];
   userClubId?: string;
@@ -18,93 +11,130 @@ interface Props {
 }
 
 export const LeagueTable = ({
-  standings, userClubId = 'fla', currentRound, totalRounds,
+  standings, userClubId = '', currentRound, totalRounds,
   onSimulateRound, onNewSeason, onShowResults,
 }: Props) => {
-  const userPos = standings.findIndex(s => s.clubId === userClubId);
   const finished = currentRound > totalRounds;
+  const userPos = standings.findIndex(s => s.clubId === userClubId);
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
+      {/* Cabeçalho */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
         <div>
-          <h2 className="text-lg font-bold">Brasileirão Série A</h2>
-          <p className="text-xs text-[#8B97A3] mt-0.5">
+          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '24px', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
+            Brasileirão Série A
+          </h2>
+          <p style={{ fontFamily: 'system-ui', fontSize: '11px', color: '#6B6560', marginTop: '4px' }}>
             {finished ? 'Temporada encerrada' : `Rodada ${currentRound} de ${totalRounds}`}
+            {userPos >= 0 && (
+              <span style={{ marginLeft: '12px', color: '#E8432D', fontWeight: 700 }}>
+                Você: {userPos + 1}º
+              </span>
+            )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {userPos >= 0 && (
-            <span className="text-xs text-[#8B97A3]">
-              Você: <span className="text-[#2DFFA8] font-bold">{userPos + 1}º</span>
-            </span>
-          )}
+        <div style={{ display: 'flex', gap: '8px' }}>
           {currentRound > 1 && (
-            <button onClick={onShowResults}
-              className="bg-white/[0.06] text-[#E6EDF3] border border-white/10 font-bold px-4 py-2 rounded-full text-xs hover:bg-white/10 transition-all cursor-pointer">
-              📋 Rodada {currentRound - 1}
+            <button onClick={onShowResults} style={{
+              background: 'white', border: '1px solid #1A1A1A', padding: '8px 16px',
+              fontFamily: 'system-ui', fontSize: '10px', fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', color: '#1A1A1A',
+            }}>
+              RODADA {currentRound - 1}
             </button>
           )}
-          {!finished && (
-            <button onClick={onSimulateRound}
-              className="bg-[#2DFFA8] text-[#0B0F14] font-black px-5 py-2 rounded-full text-xs hover:brightness-110 transition-all cursor-pointer">
-              ▶ Simular Rodada {currentRound}
+          {!finished ? (
+            <button onClick={onSimulateRound} style={{
+              background: '#E8432D', border: 'none', padding: '8px 20px',
+              fontFamily: 'system-ui', fontSize: '10px', fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', color: 'white',
+            }}>
+              ▶ SIMULAR RODADA {currentRound}
             </button>
-          )}
-          {finished && (
-            <button onClick={onNewSeason}
-              className="bg-[#FBBF24] text-[#0B0F14] font-black px-5 py-2 rounded-full text-xs hover:brightness-110 transition-all cursor-pointer">
-              🏆 Nova Temporada
+          ) : (
+            <button onClick={onNewSeason} style={{
+              background: '#1A1A1A', border: 'none', padding: '8px 20px',
+              fontFamily: 'system-ui', fontSize: '10px', fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', color: 'white',
+            }}>
+              NOVA TEMPORADA →
             </button>
           )}
         </div>
       </div>
 
-      <div className="flex gap-4 mb-4 text-xs text-[#8B97A3]">
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#2DFFA8]" /> Libertadores (top 6)
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#FB5C6B]" /> Rebaixamento (17-20)
-        </span>
+      {/* Legenda */}
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
+        {[
+          { color: '#4A7C59', label: 'Libertadores (top 6)' },
+          { color: '#E8432D', label: 'Rebaixamento (17-20)' },
+        ].map(({ color, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+            <span style={{ fontFamily: 'system-ui', fontSize: '10px', color: '#6B6560' }}>{label}</span>
+          </div>
+        ))}
       </div>
 
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[2rem_1fr_repeat(7,3rem)] px-4 py-2.5 border-b border-white/[0.06] text-xs text-[#8B97A3] font-bold uppercase tracking-wider">
-          <span>#</span>
-          <span>Clube</span>
-          <span className="text-center">PJ</span>
-          <span className="text-center">V</span>
-          <span className="text-center">E</span>
-          <span className="text-center">D</span>
-          <span className="text-center">SG</span>
-          <span className="text-center">GP</span>
-          <span className="text-center text-[#E6EDF3]">PTS</span>
+      {/* Tabela */}
+      <div style={{ background: 'white', border: '1px solid #D6CFC4', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '32px 1fr 40px 36px 36px 36px 44px 44px 48px',
+          padding: '8px 16px', background: '#1A1A1A',
+        }}>
+          {['#', 'Clube', 'PJ', 'V', 'E', 'D', 'SG', 'GP', 'PTS'].map((h, i) => (
+            <div key={h} style={{
+              fontFamily: 'system-ui', fontSize: '9px', fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890',
+              textAlign: i > 1 ? 'center' : 'left',
+            }}>{h}</div>
+          ))}
         </div>
 
         {standings.map((s, i) => {
           const isUser = s.clubId === userClubId;
           const sg = s.goalsFor - s.goalsAgainst;
+          const isLibertadores = i < 6;
+          const isRebaixamento = i >= 16;
+          const accentColor = isLibertadores ? '#4A7C59' : isRebaixamento ? '#E8432D' : '#9E9890';
+
           return (
-            <div key={s.clubId}
-              className={`grid grid-cols-[2rem_1fr_repeat(7,3rem)] px-4 py-3 border-b border-white/[0.04] last:border-0 text-sm hover:bg-white/[0.03] transition-colors ${rowBg(i, isUser)}`}>
-              <span className={`font-bold tabular-nums
-                ${i < 6 ? 'text-[#2DFFA8]' : i >= 16 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
+            <div key={s.clubId} style={{
+              display: 'grid', gridTemplateColumns: '32px 1fr 40px 36px 36px 36px 44px 44px 48px',
+              padding: '10px 16px',
+              background: isUser ? '#FEF0ED' : i % 2 === 0 ? 'white' : '#FAF8F5',
+              borderBottom: '1px solid #E8E4DC',
+              borderLeft: isUser ? '3px solid #E8432D' : '3px solid transparent',
+            }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 900, color: accentColor }}>
                 {i + 1}
               </span>
-              <span className={`font-semibold truncate ${isUser ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                {s.clubName} {isUser && '⭐'}
+              <span style={{
+                fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700,
+                color: isUser ? '#E8432D' : '#1A1A1A',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {s.clubName}{isUser && ' ★'}
               </span>
-              <span className="text-center text-[#8B97A3] tabular-nums">{s.played}</span>
-              <span className="text-center text-[#E6EDF3] tabular-nums font-medium">{s.wins}</span>
-              <span className="text-center text-[#8B97A3] tabular-nums">{s.draws}</span>
-              <span className="text-center text-[#8B97A3] tabular-nums">{s.losses}</span>
-              <span className={`text-center tabular-nums font-medium
-                ${sg > 0 ? 'text-[#2DFFA8]' : sg < 0 ? 'text-[#FB5C6B]' : 'text-[#8B97A3]'}`}>
+              {[s.played, s.wins, s.draws, s.losses].map((n, idx) => (
+                <span key={idx} style={{ fontFamily: 'system-ui', fontSize: '12px', color: '#6B6560', textAlign: 'center' }}>
+                  {n}
+                </span>
+              ))}
+              <span style={{
+                fontFamily: 'system-ui', fontSize: '12px', fontWeight: 700, textAlign: 'center',
+                color: sg > 0 ? '#4A7C59' : sg < 0 ? '#E8432D' : '#6B6560',
+              }}>
                 {sg > 0 ? `+${sg}` : sg}
               </span>
-              <span className="text-center text-[#8B97A3] tabular-nums">{s.goalsFor}</span>
-              <span className="text-center font-black tabular-nums text-[#E6EDF3]">{s.points}</span>
+              <span style={{ fontFamily: 'system-ui', fontSize: '12px', color: '#6B6560', textAlign: 'center' }}>
+                {s.goalsFor}
+              </span>
+              <span style={{ fontFamily: 'Georgia, serif', fontSize: '14px', fontWeight: 900, color: '#1A1A1A', textAlign: 'center' }}>
+                {s.points}
+              </span>
             </div>
           );
         })}

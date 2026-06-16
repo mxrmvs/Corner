@@ -1,106 +1,76 @@
-import { useState } from 'react';
 import type { Club } from './clubs';
-import type { TacticalStyle, Formation } from './types';
-
-const STYLES: { value: TacticalStyle; label: string; desc: string }[] = [
-  { value: 'TIKI_TAKA', label: 'Tiki-Taka',     desc: 'Posse e troca de passes. Anula jogo direto.' },
-  { value: 'COUNTER',   label: 'Contra-Ataque',  desc: 'Velocidade na transição. Pune o Tiki-Taka.' },
-  { value: 'DIRECT',    label: 'Jogo Direto',    desc: 'Objetividade e força. Quebra o contra-ataque.' },
-];
-
-const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
-
-const fmt = (n: number) =>
-  n >= 1_000_000
-    ? `R$ ${(n / 1_000_000).toFixed(1)}M`
-    : `R$ ${(n / 1_000).toFixed(0)}K`;
 
 interface Props {
   club: Club;
   onUpdate: (club: Club) => void;
 }
 
-export const ClubScreen = ({ club, onUpdate }: Props) => {
-  const [saved, setSaved] = useState(false);
-  const [style, setStyle]         = useState<TacticalStyle>(club.tactical.style);
-  const [formation, setFormation] = useState<Formation>(club.tactical.formation);
+const fmt = (n: number) =>
+  n >= 1_000_000 ? `R$${(n / 1_000_000).toFixed(0)}M` : `R$${(n / 1_000).toFixed(0)}K`;
 
-  const handleSave = () => {
-    onUpdate({ ...club, tactical: { style, formation } });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+const FORMATIONS = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'] as const;
+const STYLE_LABEL: Record<string, string> = {
+  TIKI_TAKA: 'Tiki-Taka', COUNTER: 'Contra-Ataque', DIRECT: 'Jogo Direto',
+};
 
-  const reputationLabel = (r: number) =>
-    r >= 80 ? 'Elite' : r >= 70 ? 'Alto Nível' : r >= 60 ? 'Médio' : 'Modesto';
+export const ClubScreen = ({ club, onUpdate }: Props) => (
+  <div style={{ maxWidth: '680px' }}>
+    <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '24px', fontWeight: 900, color: '#1A1A1A', marginBottom: '20px' }}>
+      {club.name}
+    </h2>
 
-  return (
-    <div className="max-w-2xl mx-auto flex flex-col gap-6">
-      {/* Info do clube */}
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-6">
-        <h2 className="text-lg font-bold mb-4">{club.name}</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white/[0.03] rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-[#2DFFA8]">{club.reputation}</div>
-            <div className="text-xs text-[#8B97A3] mt-1">Reputação</div>
-            <div className="text-xs text-[#E6EDF3] font-medium mt-0.5">{reputationLabel(club.reputation)}</div>
-          </div>
-          <div className="bg-white/[0.03] rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-[#38BDF8]">{fmt(club.balance)}</div>
-            <div className="text-xs text-[#8B97A3] mt-1">Caixa</div>
-          </div>
-          <div className="bg-white/[0.03] rounded-xl p-4 text-center">
-            <div className="text-2xl font-black text-[#FBBF24]">{club.stadiumCapacity.toLocaleString()}</div>
-            <div className="text-xs text-[#8B97A3] mt-1">Estádio</div>
-          </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+      {/* Identidade */}
+      <div style={{ background: 'white', border: '1px solid #D6CFC4', overflow: 'hidden' }}>
+        <div style={{ background: '#1A1A1A', padding: '8px 16px' }}>
+          <span style={{ fontFamily: 'system-ui', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890' }}>
+            Identidade
+          </span>
         </div>
-      </div>
-
-      {/* Estilo de jogo */}
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-6">
-        <h3 className="text-sm font-bold text-[#8B97A3] uppercase tracking-wider mb-4">Estilo de Jogo</h3>
-        <div className="flex flex-col gap-2">
-          {STYLES.map(s => (
-            <button key={s.value} onClick={() => setStyle(s.value)}
-              className={`flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer text-left
-                ${style === s.value
-                  ? 'border-[#2DFFA8] bg-[rgba(45,255,168,0.06)]'
-                  : 'border-white/[0.06] bg-white/[0.02] hover:border-white/20'
-                }`}>
-              <div>
-                <div className={`font-bold text-sm ${style === s.value ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                  {s.label}
-                </div>
-                <div className="text-xs text-[#8B97A3] mt-0.5">{s.desc}</div>
-              </div>
-              {style === s.value && <span className="text-[#2DFFA8] text-lg">✓</span>}
-            </button>
-          ))}
-        </div>
+        {[
+          { label: 'Reputação',  value: club.reputation        },
+          { label: 'Caixa',      value: fmt(club.balance)      },
+          { label: 'Estádio',    value: `${(club.stadiumCapacity / 1000).toFixed(0)}k lugares` },
+          { label: 'Divisão',    value: `Série ${club.division}` },
+          { label: 'Estilo',     value: STYLE_LABEL[club.tactical.style] },
+        ].map(({ label, value }, i) => (
+          <div key={label} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '10px 16px', borderBottom: '1px solid #E8E4DC',
+            background: i % 2 === 0 ? 'white' : '#FAF8F5',
+          }}>
+            <span style={{ fontFamily: 'system-ui', fontSize: '12px', color: '#6B6560' }}>{label}</span>
+            <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700, color: '#1A1A1A' }}>{value}</span>
+          </div>
+        ))}
       </div>
 
       {/* Formação */}
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-6">
-        <h3 className="text-sm font-bold text-[#8B97A3] uppercase tracking-wider mb-4">Formação</h3>
-        <div className="flex gap-2 flex-wrap">
-          {FORMATIONS.map(f => (
-            <button key={f} onClick={() => setFormation(f)}
-              className={`px-5 py-2.5 rounded-xl border font-bold text-sm transition-all cursor-pointer
-                ${formation === f
-                  ? 'border-[#2DFFA8] bg-[rgba(45,255,168,0.06)] text-[#2DFFA8]'
-                  : 'border-white/[0.06] bg-white/[0.02] text-[#8B97A3] hover:border-white/20 hover:text-[#E6EDF3]'
-                }`}>
-              {f}
-            </button>
-          ))}
+      <div style={{ background: 'white', border: '1px solid #D6CFC4', overflow: 'hidden' }}>
+        <div style={{ background: '#1A1A1A', padding: '8px 16px' }}>
+          <span style={{ fontFamily: 'system-ui', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890' }}>
+            Formação
+          </span>
+        </div>
+        <div style={{ padding: '16px' }}>
+          <p style={{ fontFamily: 'system-ui', fontSize: '11px', color: '#6B6560', marginBottom: '12px' }}>
+            Formação atual: <strong style={{ color: '#1A1A1A' }}>{club.tactical.formation}</strong>
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {FORMATIONS.map(f => (
+              <button key={f} onClick={() => onUpdate({ ...club, tactical: { ...club.tactical, formation: f } })}
+                style={{
+                  padding: '10px 16px', border: '1px solid #D6CFC4', cursor: 'pointer', textAlign: 'left',
+                  background: club.tactical.formation === f ? '#1A1A1A' : 'white',
+                  color: club.tactical.formation === f ? 'white' : '#1A1A1A',
+                  fontFamily: 'Georgia, serif', fontSize: '14px', fontWeight: 700,
+                }}>
+                {f} {club.tactical.formation === f && '←'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-
-      {/* Botão salvar */}
-      <button onClick={handleSave}
-        className="bg-[#2DFFA8] text-[#0B0F14] font-black py-3 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
-        {saved ? '✓ Salvo!' : 'Salvar Táticas'}
-      </button>
     </div>
-  );
-};
+  </div>
+);

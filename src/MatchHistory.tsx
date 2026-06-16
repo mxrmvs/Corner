@@ -7,109 +7,99 @@ interface Props {
   userClubId: string;
 }
 
-const clubName = (clubs: Club[], id: string) =>
-  clubs.find(c => c.id === id)?.name ?? id;
+const clubName = (clubs: Club[], id: string) => clubs.find(c => c.id === id)?.name ?? id;
 
-const getResult = (m: Match, userClubId: string): 'V' | 'E' | 'D' => {
-  const isHome = m.homeClubId === userClubId;
-  const userGoals = isHome ? m.homeGoals! : m.awayGoals!;
-  const oppGoals  = isHome ? m.awayGoals! : m.homeGoals!;
-  if (userGoals > oppGoals) return 'V';
-  if (userGoals < oppGoals) return 'D';
-  return 'E';
+const getResult = (m: Match, uid: string): 'V' | 'E' | 'D' => {
+  const isHome = m.homeClubId === uid;
+  const ug = isHome ? m.homeGoals! : m.awayGoals!;
+  const og = isHome ? m.awayGoals! : m.homeGoals!;
+  return ug > og ? 'V' : ug < og ? 'D' : 'E';
 };
 
-const resultStyle: Record<string, string> = {
-  V: 'bg-[rgba(45,255,168,0.15)] text-[#2DFFA8] ring-1 ring-[#2DFFA8]/30',
-  E: 'bg-[rgba(251,191,36,0.15)] text-[#FBBF24] ring-1 ring-[#FBBF24]/30',
-  D: 'bg-[rgba(251,92,107,0.15)] text-[#FB5C6B] ring-1 ring-[#FB5C6B]/30',
+const RESULT_STYLE: Record<string, { bg: string; color: string }> = {
+  V: { bg: '#EAF3DE', color: '#3B6D11' },
+  E: { bg: '#FAEEDA', color: '#854F0B' },
+  D: { bg: '#FCEBEB', color: '#A32D2D' },
 };
 
 export const MatchHistory = ({ matches, clubs, userClubId }: Props) => {
   const played = matches
-    .filter(m =>
-      m.played &&
-      (m.homeClubId === userClubId || m.awayClubId === userClubId)
-    )
+    .filter(m => m.played && (m.homeClubId === userClubId || m.awayClubId === userClubId))
     .reverse();
-
-  if (!played.length) {
-    return (
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-8 text-center">
-        <div className="text-3xl mb-3">📋</div>
-        <p className="text-[#8B97A3] text-sm">Nenhuma partida disputada ainda.</p>
-        <p className="text-[#8B97A3] text-xs mt-1">Simule rodadas na aba Tabela para ver o histórico.</p>
-      </div>
-    );
-  }
 
   const wins   = played.filter(m => getResult(m, userClubId) === 'V').length;
   const draws  = played.filter(m => getResult(m, userClubId) === 'E').length;
   const losses = played.filter(m => getResult(m, userClubId) === 'D').length;
-  const gf = played.reduce((s, m) => {
-    const isHome = m.homeClubId === userClubId;
-    return s + (isHome ? m.homeGoals! : m.awayGoals!);
-  }, 0);
-  const ga = played.reduce((s, m) => {
-    const isHome = m.homeClubId === userClubId;
-    return s + (isHome ? m.awayGoals! : m.homeGoals!);
-  }, 0);
+  const gf = played.reduce((s, m) => s + (m.homeClubId === userClubId ? m.homeGoals! : m.awayGoals!), 0);
+  const ga = played.reduce((s, m) => s + (m.homeClubId === userClubId ? m.awayGoals! : m.homeGoals!), 0);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-bold">Histórico de Partidas</h2>
+    <div>
+      <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '24px', fontWeight: 900, color: '#1A1A1A', marginBottom: '16px' }}>
+        Histórico de Partidas
+      </h2>
 
       {/* Resumo */}
-      <div className="grid grid-cols-5 gap-2">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginBottom: '20px' }}>
         {[
-          { label: 'Jogos', value: played.length, color: 'text-[#E6EDF3]' },
-          { label: 'Vitórias', value: wins,   color: 'text-[#2DFFA8]' },
-          { label: 'Empates', value: draws,   color: 'text-[#FBBF24]' },
-          { label: 'Derrotas', value: losses, color: 'text-[#FB5C6B]' },
-          { label: 'Saldo', value: gf - ga > 0 ? `+${gf - ga}` : gf - ga, color: gf >= ga ? 'text-[#2DFFA8]' : 'text-[#FB5C6B]' },
+          { label: 'Jogos',   value: played.length, color: '#1A1A1A' },
+          { label: 'Vitórias', value: wins,   color: '#3B6D11' },
+          { label: 'Empates',  value: draws,  color: '#854F0B' },
+          { label: 'Derrotas', value: losses, color: '#A32D2D' },
+          { label: 'Saldo',    value: gf - ga > 0 ? `+${gf - ga}` : gf - ga, color: gf >= ga ? '#3B6D11' : '#A32D2D' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-[#131A22] border border-white/[0.08] rounded-xl p-3 text-center">
-            <p className={`text-xl font-black ${color}`}>{value}</p>
-            <p className="text-xs text-[#8B97A3] mt-0.5">{label}</p>
+          <div key={label} style={{ background: 'white', border: '1px solid #D6CFC4', padding: '12px', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'Georgia, serif', fontSize: '22px', fontWeight: 900, color }}>{value}</div>
+            <div style={{ fontFamily: 'system-ui', fontSize: '10px', color: '#9E9890', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>{label}</div>
           </div>
         ))}
       </div>
 
       {/* Lista */}
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[3rem_1fr_5rem_1fr_3rem] px-4 py-2.5 border-b border-white/[0.06] text-xs text-[#8B97A3] font-bold uppercase tracking-wider">
-          <span className="text-center">Rod.</span>
-          <span className="text-right pr-2">Casa</span>
-          <span className="text-center">Placar</span>
-          <span className="text-left pl-2">Fora</span>
-          <span className="text-center">Res.</span>
+      {played.length === 0 ? (
+        <div style={{ background: 'white', border: '1px solid #D6CFC4', padding: '48px', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'system-ui', fontSize: '13px', color: '#9E9890' }}>
+            Nenhuma partida disputada ainda.<br />Simule rodadas na aba Tabela.
+          </p>
         </div>
-
-        {played.map(m => {
-          const result = getResult(m, userClubId);
-          const isHome = m.homeClubId === userClubId;
-          return (
-            <div key={m.id}
-              className="grid grid-cols-[3rem_1fr_5rem_1fr_3rem] px-4 py-3 border-b border-white/[0.04] last:border-0 text-sm hover:bg-white/[0.02] transition-colors items-center">
-              <span className="text-center text-xs text-[#8B97A3] tabular-nums">{m.round}</span>
-              <span className={`text-right pr-2 truncate font-semibold text-sm
-                ${isHome ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                {clubName(clubs, m.homeClubId)}
-              </span>
-              <span className="text-center font-black tabular-nums text-[#E6EDF3]">
-                {m.homeGoals} — {m.awayGoals}
-              </span>
-              <span className={`text-left pl-2 truncate font-semibold text-sm
-                ${!isHome ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                {clubName(clubs, m.awayClubId)}
-              </span>
-              <span className={`text-center text-xs font-black px-1.5 py-0.5 rounded-md ${resultStyle[result]}`}>
-                {result}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      ) : (
+        <div style={{ background: 'white', border: '1px solid #D6CFC4', overflow: 'hidden' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 48px', padding: '8px 16px', background: '#1A1A1A' }}>
+            {['Rod.', 'Casa', 'Placar', 'Fora', 'Res.'].map((h, i) => (
+              <div key={h} style={{ fontFamily: 'system-ui', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9E9890', textAlign: i === 2 || i === 4 ? 'center' : i === 3 ? 'left' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {played.map((m, i) => {
+            const result = getResult(m, userClubId);
+            const rs = RESULT_STYLE[result];
+            const isHome = m.homeClubId === userClubId;
+            return (
+              <div key={m.id} style={{
+                display: 'grid', gridTemplateColumns: '40px 1fr 80px 1fr 48px',
+                padding: '10px 16px', borderBottom: '1px solid #E8E4DC',
+                background: i % 2 === 0 ? 'white' : '#FAF8F5',
+                alignItems: 'center',
+              }}>
+                <span style={{ fontFamily: 'system-ui', fontSize: '11px', color: '#9E9890' }}>{m.round}</span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700, color: isHome ? '#E8432D' : '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {clubName(clubs, m.homeClubId)}
+                </span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '14px', fontWeight: 900, color: '#1A1A1A', textAlign: 'center' }}>
+                  {m.homeGoals} — {m.awayGoals}
+                </span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700, color: !isHome ? '#E8432D' : '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {clubName(clubs, m.awayClubId)}
+                </span>
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: 'system-ui', fontSize: '11px', fontWeight: 700, padding: '3px 8px', background: rs.bg, color: rs.color }}>
+                    {result}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

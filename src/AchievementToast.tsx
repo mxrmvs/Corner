@@ -7,18 +7,17 @@ interface Props {
 }
 
 export const AchievementToast = ({ achievements, onDone }: Props) => {
-  const [index, setIndex] = useState(0);
+  const [index, setIndex]   = useState(0);
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     if (!achievements.length) { onDone(); return; }
-    setIndex(0);
-    setVisible(true);
+    setIndex(0); setVisible(true);
   }, [achievements]);
 
   useEffect(() => {
     if (!achievements.length) return;
-    const timer = setTimeout(() => {
+    const t = setTimeout(() => {
       if (index < achievements.length - 1) {
         setVisible(false);
         setTimeout(() => { setIndex(i => i + 1); setVisible(true); }, 300);
@@ -27,23 +26,35 @@ export const AchievementToast = ({ achievements, onDone }: Props) => {
         setTimeout(onDone, 300);
       }
     }, 3000);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [index, achievements]);
 
   if (!achievements.length) return null;
   const a = achievements[index];
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 transition-all duration-300
-      ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-      <div className="bg-[#131A22] border border-[#2DFFA8]/30 rounded-2xl px-5 py-4 flex items-center gap-4 shadow-glow max-w-sm">
-        <span className="text-3xl">{a.icon}</span>
+    <div style={{
+      position: 'fixed', bottom: '24px', right: '24px', zIndex: 100,
+      transition: 'all 0.3s',
+      opacity: visible ? 1 : 0,
+      transform: visible ? 'translateY(0)' : 'translateY(8px)',
+    }}>
+      <div style={{
+        background: 'white', border: '1px solid #1A1A1A',
+        padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px',
+        maxWidth: '320px', boxShadow: '4px 4px 0 #1A1A1A',
+      }}>
+        <span style={{ fontSize: '28px', flexShrink: 0 }}>{a.icon}</span>
         <div>
-          <p className="text-xs text-[#2DFFA8] font-bold uppercase tracking-widest mb-0.5">
+          <p style={{ fontFamily: 'system-ui', fontSize: '10px', color: '#E8432D', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '2px' }}>
             Conquista desbloqueada
           </p>
-          <p className="font-black text-[#E6EDF3] text-sm">{a.title}</p>
-          <p className="text-xs text-[#8B97A3] mt-0.5">{a.desc}</p>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
+            {a.title}
+          </p>
+          <p style={{ fontFamily: 'system-ui', fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>
+            {a.desc}
+          </p>
         </div>
       </div>
     </div>

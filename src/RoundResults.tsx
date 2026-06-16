@@ -9,65 +9,70 @@ interface Props {
   onClose: () => void;
 }
 
+const clubName = (clubs: Club[], id: string) => clubs.find(c => c.id === id)?.name ?? id;
+
 export const RoundResults = ({ matches, clubs, userClubId, round, onClose }: Props) => {
-  const clubName = (id: string) => clubs.find(c => c.id === id)?.name ?? id;
-
-  const isUserMatch = (m: Match) =>
-    m.homeClubId === userClubId || m.awayClubId === userClubId;
-
-  const resultColor = (m: Match) => {
-    if (!m.played) return '';
+  const getResultStyle = (m: Match) => {
+    if (!m.played) return {};
     const isHome = m.homeClubId === userClubId;
-    const userGoals = isHome ? m.homeGoals! : m.awayGoals!;
-    const oppGoals  = isHome ? m.awayGoals! : m.homeGoals!;
-    if (userGoals > oppGoals) return 'border-[#2DFFA8] bg-[rgba(45,255,168,0.05)]';
-    if (userGoals < oppGoals) return 'border-[#FB5C6B] bg-[rgba(251,92,107,0.05)]';
-    return 'border-[#FBBF24] bg-[rgba(251,191,36,0.05)]';
+    const ug = isHome ? m.homeGoals! : m.awayGoals!;
+    const og = isHome ? m.awayGoals! : m.homeGoals!;
+    if (ug > og) return { borderLeft: '3px solid #4A7C59', background: '#F6FAF3' };
+    if (ug < og) return { borderLeft: '3px solid #E8432D', background: '#FEF5F5' };
+    return { borderLeft: '3px solid #C9A84C', background: '#FDFAF3' };
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#131A22] border border-white/[0.08] rounded-2xl p-6 max-w-lg w-full max-h-[80vh] flex flex-col gap-4">
-        <div className="flex justify-between items-center">
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,26,26,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: 'white', width: '100%', maxWidth: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', border: '1px solid #1A1A1A' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #D6CFC4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 className="text-lg font-black">Rodada {round}</h2>
-            <p className="text-xs text-[#8B97A3] mt-0.5">Resultados de todos os jogos</p>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '20px', fontWeight: 900, color: '#1A1A1A', margin: 0 }}>
+              Rodada {round}
+            </h2>
+            <p style={{ fontFamily: 'system-ui', fontSize: '10px', color: '#9E9890', marginTop: '2px' }}>
+              Resultados de todos os jogos
+            </p>
           </div>
-          <button onClick={onClose}
-            className="text-[#8B97A3] hover:text-[#E6EDF3] text-xl cursor-pointer transition-colors">
-            ✕
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'system-ui', fontSize: '18px', color: '#6B6560' }}>✕</button>
+        </div>
+
+        {/* Lista */}
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {matches.map(m => {
+            const isUserMatch = m.homeClubId === userClubId || m.awayClubId === userClubId;
+            const rs = isUserMatch ? getResultStyle(m) : {};
+            return (
+              <div key={m.id} style={{
+                display: 'grid', gridTemplateColumns: '1fr 80px 1fr',
+                padding: '10px 20px', borderBottom: '1px solid #E8E4DC',
+                alignItems: 'center', ...rs,
+              }}>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700, color: m.homeClubId === userClubId ? '#E8432D' : '#1A1A1A', textAlign: 'right', paddingRight: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {clubName(clubs, m.homeClubId)}
+                </span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '15px', fontWeight: 900, color: '#1A1A1A', textAlign: 'center' }}>
+                  {m.played ? `${m.homeGoals} — ${m.awayGoals}` : 'vs'}
+                </span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: '13px', fontWeight: 700, color: m.awayClubId === userClubId ? '#E8432D' : '#1A1A1A', textAlign: 'left', paddingLeft: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {clubName(clubs, m.awayClubId)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid #D6CFC4' }}>
+          <button onClick={onClose} style={{
+            width: '100%', background: '#1A1A1A', color: 'white', border: 'none',
+            padding: '12px', cursor: 'pointer', fontFamily: 'system-ui', fontSize: '11px',
+            fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+          }}>
+            FECHAR
           </button>
         </div>
-
-        <div className="flex flex-col gap-2 overflow-y-auto">
-          {matches.map(m => (
-            <div key={m.id}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all
-                ${isUserMatch(m) ? resultColor(m) : 'border-white/[0.06] bg-white/[0.02]'}`}>
-              {/* Time da casa */}
-              <span className={`flex-1 text-right text-sm font-semibold truncate
-                ${m.homeClubId === userClubId ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                {clubName(m.homeClubId)}
-              </span>
-
-              {/* Placar */}
-              <span className="tabular-nums font-black text-base text-[#E6EDF3] w-16 text-center shrink-0">
-                {m.played ? `${m.homeGoals} — ${m.awayGoals}` : 'vs'}
-              </span>
-
-              {/* Time visitante */}
-              <span className={`flex-1 text-left text-sm font-semibold truncate
-                ${m.awayClubId === userClubId ? 'text-[#2DFFA8]' : 'text-[#E6EDF3]'}`}>
-                {clubName(m.awayClubId)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <button onClick={onClose}
-          className="bg-[#2DFFA8] text-[#0B0F14] font-black py-3 rounded-full text-sm hover:brightness-110 transition-all cursor-pointer">
-          Fechar
-        </button>
       </div>
     </div>
   );
