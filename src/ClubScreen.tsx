@@ -1,4 +1,3 @@
-cat > src/ClubScreen.tsx << 'EOF'
 import { useState } from 'react';
 import type { Club } from './clubs';
 import type { Player } from './types';
@@ -35,8 +34,8 @@ const Bar = ({ value, color }: { value: number; color: string }) => (
 );
 
 export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) => {
-  const [sub, setSub]             = useState<SubScreen>('escalacao');
-  const [globalFocus, setGlobal]  = useState<TrainingFocus>('TECHNICAL');
+  const [sub, setSub]               = useState<SubScreen>('escalacao');
+  const [globalFocus, setGlobal]    = useState<TrainingFocus>('TECHNICAL');
   const [individual, setIndividual] = useState(false);
   const [playerFocus, setPlayerFocus] = useState<Record<string, TrainingFocus>>({});
 
@@ -56,12 +55,11 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
 
   return (
     <div>
-      {/* Sub-nav */}
       <div style={{ display: 'flex', borderBottom: '1px solid #D6CFC4', marginBottom: '20px', background: 'white' }}>
         {([
-          { value: 'escalacao', label: 'Escalação'     },
-          { value: 'treino',    label: 'Treino'         },
-          { value: 'config',    label: 'Configurações'  },
+          { value: 'escalacao', label: 'Escalação'    },
+          { value: 'treino',    label: 'Treino'        },
+          { value: 'config',    label: 'Configurações' },
         ] as { value: SubScreen; label: string }[]).map(({ value, label }) => (
           <button key={value} onClick={() => setSub(value)}
             style={{
@@ -77,7 +75,6 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
         ))}
       </div>
 
-      {/* ESCALAÇÃO */}
       {sub === 'escalacao' && (
         <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '20px' }}>
           <div>
@@ -129,10 +126,8 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
         </div>
       )}
 
-      {/* TREINO */}
       {sub === 'treino' && (
         <div>
-          {/* Toggle */}
           <div style={{ display: 'flex', border: '1px solid #D6CFC4', overflow: 'hidden', width: 'fit-content', marginBottom: '16px' }}>
             {[
               { value: false, label: 'Foco da Semana' },
@@ -152,7 +147,6 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
             ))}
           </div>
 
-          {/* Foco global */}
           {!individual && (
             <div style={{ background: 'white', border: '1px solid #D6CFC4', padding: '16px', marginBottom: '16px' }}>
               <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6B6560', marginBottom: '12px' }}>
@@ -175,11 +169,10 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
             </div>
           )}
 
-          {/* Cards jogadores */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px', marginBottom: '16px' }}>
             {myPlayers.map(p => {
-              const eff = effectiveRating(p);
-              const focus = individual ? (playerFocus[p.id] ?? 'TECHNICAL') : globalFocus;
+              const eff      = effectiveRating(p);
+              const focus    = individual ? (playerFocus[p.id] ?? 'TECHNICAL') : globalFocus;
               const focusOpt = FOCUS_OPTIONS.find(f => f.value === focus);
               return (
                 <div key={p.id} style={{ background: 'white', border: '1px solid #D6CFC4', padding: '12px' }}>
@@ -230,7 +223,6 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
         </div>
       )}
 
-      {/* CONFIG */}
       {sub === 'config' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxWidth: '600px' }}>
           <div style={{ background: 'white', border: '1px solid #D6CFC4', overflow: 'hidden' }}>
@@ -259,7 +251,8 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {FORMATIONS.map(f => (
-                  <button key={f} onClick={() => onUpdate({ ...club, tactical: { ...club.tactical, formation: f } })}
+                  <button key={f}
+                    onClick={() => onUpdate({ ...club, tactical: { ...club.tactical, formation: f } })}
                     style={{
                       padding: '9px 14px', border: '1px solid #D6CFC4', cursor: 'pointer', textAlign: 'left',
                       background: club.tactical.formation === f ? '#1A1A1A' : 'white',
@@ -277,4 +270,3 @@ export const ClubScreen = ({ club, players, onUpdate, onApplyTraining }: Props) 
     </div>
   );
 };
-EOF
