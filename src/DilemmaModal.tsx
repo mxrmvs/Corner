@@ -23,7 +23,7 @@ export const DilemmaModal = ({ dilemma, players, onChoose }: Props) => {
             </p>
           )}
           <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '18px', fontWeight: 900, color: '#1A1A1A', lineHeight: 1.4, margin: 0 }}>
-            {dilemma.description}
+            {dilemma.title}
           </h2>
         </div>
 
